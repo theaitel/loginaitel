@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -22,21 +21,10 @@ import {
   Bot,
   Save,
   ArrowLeft,
-  Volume2,
-  Settings,
-  Mic,
-  Phone,
-  MessageSquare,
   Loader2,
   FileText,
   RotateCcw,
-  CheckCircle,
 } from "lucide-react";
-import { VoiceSelector, VoiceConfig, CARTESIA_VOICES } from "@/components/agent-builder/VoiceSelector";
-import { LLMSettings, LLMConfig } from "@/components/agent-builder/LLMSettings";
-import { TranscriberSettings, TranscriberConfig } from "@/components/agent-builder/TranscriberSettings";
-import { TelephonySettings, TelephonyConfig } from "@/components/agent-builder/TelephonySettings";
-import { ConversationSettings, ConversationConfig } from "@/components/agent-builder/ConversationSettings";
 
 interface Agent {
   id: string;
@@ -49,40 +37,6 @@ interface Agent {
   client_id: string | null;
 }
 
-// Default configurations
-const defaultVoiceConfig: VoiceConfig = {
-  provider: "cartesia",
-  voiceId: CARTESIA_VOICES[0].id,
-  voiceName: CARTESIA_VOICES[0].name,
-};
-
-const defaultLLMConfig: LLMConfig = {
-  model: "gpt-4.1-nano",
-  provider: "openai",
-  family: "openai",
-  temperature: 0.7,
-  maxTokens: 150,
-};
-
-const defaultTranscriberConfig: TranscriberConfig = {
-  provider: "deepgram",
-  model: "nova-3",
-  language: "en",
-};
-
-const defaultTelephonyConfig: TelephonyConfig = {
-  provider: "plivo",
-};
-
-const defaultConversationConfig: ConversationConfig = {
-  hangupAfterSilence: 10,
-  callTerminate: 90,
-  interruptionWords: 2,
-  voicemailDetection: true,
-  backchanneling: false,
-  ambientNoise: false,
-  ambientNoiseTrack: "office-ambience",
-};
 
 export default function AgentConfigEditor() {
   const { user } = useAuth();
@@ -93,11 +47,6 @@ export default function AgentConfigEditor() {
 
   const [selectedAgentId, setSelectedAgentId] = useState<string>(agentIdFromUrl || "");
   const [systemPrompt, setSystemPrompt] = useState("");
-  const [voiceConfig, setVoiceConfig] = useState<VoiceConfig>(defaultVoiceConfig);
-  const [llmConfig, setLLMConfig] = useState<LLMConfig>(defaultLLMConfig);
-  const [transcriberConfig, setTranscriberConfig] = useState<TranscriberConfig>(defaultTranscriberConfig);
-  const [telephonyConfig, setTelephonyConfig] = useState<TelephonyConfig>(defaultTelephonyConfig);
-  const [conversationConfig, setConversationConfig] = useState<ConversationConfig>(defaultConversationConfig);
   const [hasChanges, setHasChanges] = useState(false);
 
   // Fetch agents assigned to this engineer
@@ -122,90 +71,27 @@ export default function AgentConfigEditor() {
   useEffect(() => {
     if (selectedAgent) {
       setSystemPrompt(selectedAgent.current_system_prompt || selectedAgent.original_system_prompt || "");
-      
-      // Parse agent_config if available
-      const config = selectedAgent.agent_config as Record<string, unknown> | null;
-      if (config) {
-        // Voice config
-        if (config.voice) {
-          const voice = config.voice as Record<string, unknown>;
-          const provider = (voice.provider as string) === "elevenlabs" ? "elevenlabs" : "cartesia";
-          setVoiceConfig({
-            provider,
-            voiceId: (voice.voiceId as string) || CARTESIA_VOICES[0].id,
-            voiceName: (voice.voiceName as string) || CARTESIA_VOICES[0].name,
-          });
-        }
-        // LLM config
-        if (config.llm) {
-          const llm = config.llm as Record<string, unknown>;
-          setLLMConfig({
-            model: (llm.model as string) || "gpt-4.1-nano",
-            provider: (llm.provider as string) || "openai",
-            family: (llm.family as string) || "openai",
-            temperature: (llm.temperature as number) || 0.7,
-            maxTokens: (llm.maxTokens as number) || 150,
-          });
-        }
-        // Transcriber config
-        if (config.transcriber) {
-          const transcriber = config.transcriber as Record<string, unknown>;
-          setTranscriberConfig({
-            provider: (transcriber.provider as string) || "deepgram",
-            model: (transcriber.model as string) || "nova-3",
-            language: (transcriber.language as string) || "en",
-          });
-        }
-        // Telephony config
-        if (config.telephony) {
-          const telephony = config.telephony as Record<string, unknown>;
-          setTelephonyConfig({
-            provider: (telephony.provider as "twilio" | "plivo" | "exotel") || "plivo",
-          });
-        }
-        // Conversation config
-        if (config.conversation) {
-          const conv = config.conversation as Record<string, unknown>;
-          setConversationConfig({
-            hangupAfterSilence: (conv.hangupAfterSilence as number) || 10,
-            callTerminate: (conv.callTerminate as number) || 90,
-            interruptionWords: (conv.interruptionWords as number) || 2,
-            voicemailDetection: (conv.voicemailDetection as boolean) ?? true,
-            backchanneling: (conv.backchanneling as boolean) ?? false,
-            ambientNoise: (conv.ambientNoise as boolean) ?? false,
-            ambientNoiseTrack: (conv.ambientNoiseTrack as "office-ambience" | "coffee-shop" | "call-center") || "office-ambience",
-          });
-        }
-      }
       setHasChanges(false);
     }
   }, [selectedAgent]);
 
-  // Track changes
+  // Track changes to system prompt only
   useEffect(() => {
     if (selectedAgent) {
-      setHasChanges(true);
+      const originalPrompt = selectedAgent.current_system_prompt || selectedAgent.original_system_prompt || "";
+      setHasChanges(systemPrompt !== originalPrompt);
     }
-  }, [systemPrompt, voiceConfig, llmConfig, transcriberConfig, telephonyConfig, conversationConfig]);
+  }, [systemPrompt, selectedAgent]);
 
-  // Save mutation
+  // Save mutation - only saves system prompt
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!selectedAgentId) throw new Error("No agent selected");
-
-      const updatedConfig = {
-        voice: { ...voiceConfig },
-        llm: { ...llmConfig },
-        transcriber: { ...transcriberConfig },
-        telephony: { ...telephonyConfig },
-        conversation: { ...conversationConfig },
-      };
 
       const { error } = await supabase
         .from("bolna_agents")
         .update({
           current_system_prompt: systemPrompt,
-          agent_config: JSON.parse(JSON.stringify(updatedConfig)),
           updated_at: new Date().toISOString(),
         })
         .eq("id", selectedAgentId);
@@ -240,9 +126,9 @@ export default function AgentConfigEditor() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Agent Configuration</h1>
+              <h1 className="text-2xl font-bold">Agent Prompt Editor</h1>
               <p className="text-sm text-muted-foreground">
-                Configure voice, LLM, and conversation settings
+                Edit the system prompt for your assigned agents
               </p>
             </div>
           </div>
@@ -308,113 +194,48 @@ export default function AgentConfigEditor() {
           </CardContent>
         </Card>
 
-        {/* Configuration Tabs */}
+        {/* System Prompt Editor - Only editable section for engineers */}
         {selectedAgent && (
-          <Tabs defaultValue="prompt" className="space-y-4">
-            <TabsList className="grid grid-cols-5 w-full max-w-2xl">
-              <TabsTrigger value="prompt" className="flex items-center gap-1">
-                <FileText className="h-4 w-4" />
-                <span className="hidden sm:inline">Prompt</span>
-              </TabsTrigger>
-              <TabsTrigger value="voice" className="flex items-center gap-1">
-                <Volume2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Voice</span>
-              </TabsTrigger>
-              <TabsTrigger value="llm" className="flex items-center gap-1">
-                <Settings className="h-4 w-4" />
-                <span className="hidden sm:inline">LLM</span>
-              </TabsTrigger>
-              <TabsTrigger value="transcriber" className="flex items-center gap-1">
-                <Mic className="h-4 w-4" />
-                <span className="hidden sm:inline">STT</span>
-              </TabsTrigger>
-              <TabsTrigger value="telephony" className="flex items-center gap-1">
-                <Phone className="h-4 w-4" />
-                <span className="hidden sm:inline">Telephony</span>
-              </TabsTrigger>
-            </TabsList>
+          <Card className="border-2">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  System Prompt
+                </CardTitle>
+                <Button variant="outline" size="sm" onClick={handleResetPrompt}>
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  Reset to Original
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="systemPrompt">Agent Instructions</Label>
+                <Textarea
+                  id="systemPrompt"
+                  value={systemPrompt}
+                  onChange={(e) => setSystemPrompt(e.target.value)}
+                  placeholder="Enter the system prompt for this agent..."
+                  className="min-h-[300px] font-mono text-sm border-2"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Define how the agent should behave, its personality, and goals.
+                </p>
+              </div>
 
-            {/* System Prompt Tab */}
-            <TabsContent value="prompt">
-              <Card className="border-2">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      System Prompt
-                    </CardTitle>
-                    <Button variant="outline" size="sm" onClick={handleResetPrompt}>
-                      <RotateCcw className="h-4 w-4 mr-1" />
-                      Reset to Original
-                    </Button>
+              {selectedAgent.original_system_prompt && (
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">Original Prompt (Read-only)</Label>
+                  <div className="p-3 bg-muted/50 border border-border rounded text-sm max-h-40 overflow-auto">
+                    <pre className="whitespace-pre-wrap font-mono text-xs">
+                      {selectedAgent.original_system_prompt}
+                    </pre>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="systemPrompt">Agent Instructions</Label>
-                    <Textarea
-                      id="systemPrompt"
-                      value={systemPrompt}
-                      onChange={(e) => setSystemPrompt(e.target.value)}
-                      placeholder="Enter the system prompt for this agent..."
-                      className="min-h-[300px] font-mono text-sm border-2"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Define how the agent should behave, its personality, and goals.
-                    </p>
-                  </div>
-
-                  {selectedAgent.original_system_prompt && (
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground">Original Prompt (Read-only)</Label>
-                      <div className="p-3 bg-muted/50 border border-border rounded text-sm max-h-40 overflow-auto">
-                        <pre className="whitespace-pre-wrap font-mono text-xs">
-                          {selectedAgent.original_system_prompt}
-                        </pre>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Voice Tab */}
-            <TabsContent value="voice">
-              <Card className="border-2">
-                <CardContent className="pt-6">
-                  <VoiceSelector value={voiceConfig} onChange={setVoiceConfig} />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* LLM Tab */}
-            <TabsContent value="llm">
-              <Card className="border-2">
-                <CardContent className="pt-6">
-                  <LLMSettings value={llmConfig} onChange={setLLMConfig} />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Transcriber Tab */}
-            <TabsContent value="transcriber">
-              <Card className="border-2">
-                <CardContent className="pt-6">
-                  <TranscriberSettings value={transcriberConfig} onChange={setTranscriberConfig} />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Telephony Tab */}
-            <TabsContent value="telephony">
-              <Card className="border-2">
-                <CardContent className="pt-6 space-y-6">
-                  <TelephonySettings value={telephonyConfig} onChange={setTelephonyConfig} />
-                  <ConversationSettings value={conversationConfig} onChange={setConversationConfig} />
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {/* No Agent Selected State */}
