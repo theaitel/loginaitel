@@ -40,6 +40,16 @@ const statusConfig = {
     icon: CheckCircle,
     className: "bg-chart-2/10 border-chart-2 text-chart-2",
   },
+  approved: {
+    label: "Approved",
+    icon: CheckCircle,
+    className: "bg-chart-2/10 border-chart-2 text-chart-2",
+  },
+  submitted: {
+    label: "Pending Review",
+    icon: AlertCircle,
+    className: "bg-chart-4/10 border-chart-4 text-chart-4",
+  },
   pending_review: {
     label: "Pending Review",
     icon: AlertCircle,
@@ -133,9 +143,9 @@ export default function AdminTasks() {
 
   const stats = {
     total: tasks?.length || 0,
-    pendingReview: tasks?.filter((t) => t.status === "pending_review").length || 0,
+    pendingReview: tasks?.filter((t) => t.status === "submitted" || t.status === "pending_review").length || 0,
     inProgress: tasks?.filter((t) => t.status === "in_progress").length || 0,
-    completed: tasks?.filter((t) => t.status === "completed").length || 0,
+    completed: tasks?.filter((t) => t.status === "completed" || t.status === "approved").length || 0,
   };
 
   const handleEdit = (task: any) => {
@@ -234,7 +244,7 @@ export default function AdminTasks() {
                 filteredTasks?.map((task) => {
                   const status = statusConfig[task.status as keyof typeof statusConfig] || statusConfig.pending;
                   const StatusIcon = status.icon;
-                  const isPendingReview = task.status === "pending_review";
+                  const isPendingReview = task.status === "submitted" || task.status === "pending_review";
                   return (
                     <TableRow key={task.id} className="border-b-2 border-border">
                       <TableCell className="font-medium">{task.title}</TableCell>
