@@ -127,7 +127,7 @@ export function CreateBatchDialog({ open, onOpenChange, onSuccess }: CreateBatch
   };
 
   const downloadSampleCsv = () => {
-    const sampleCsv = `recipient_phone_number,name,company
+    const sampleCsv = `contact_number,name,company
 +919876543210,John Doe,Acme Corp
 +919876543211,Jane Smith,Tech Inc
 +919876543212,Bob Johnson,StartupXYZ`;
