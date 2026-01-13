@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { VoiceSelector, VoiceConfig, CARTESIA_VOICES } from "@/components/agent-builder/VoiceSelector";
 import { LLMSettings, LLMConfig, LLM_MODELS } from "@/components/agent-builder/LLMSettings";
@@ -13,27 +14,71 @@ import { TestCallDialog } from "@/components/agent-builder/TestCallDialog";
 import { createBolnaAgent, buildAgentConfig, makeCall, BuildAgentOptions } from "@/lib/bolna";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   Bot,
   Save,
   Play,
   Loader2,
   CheckCircle2,
+  ClipboardList,
+  Trophy,
+  ArrowLeft,
+  AlertCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+interface Task {
+  id: string;
+  title: string;
+  description: string | null;
+  points: number;
+  status: string;
+  deadline: string | null;
+}
 
 export default function AgentBuilder() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const taskId = searchParams.get("taskId");
+  
   const [isSaving, setIsSaving] = useState(false);
   const [savedAgentId, setSavedAgentId] = useState<string | null>(null);
   const [testDialogOpen, setTestDialogOpen] = useState(false);
+
+  // Fetch task if taskId is provided
+  const { data: task, isLoading: loadingTask } = useQuery({
+    queryKey: ["task", taskId],
+    queryFn: async () => {
+      if (!taskId) return null;
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("id", taskId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data as Task | null;
+    },
+    enabled: !!taskId,
+  });
 
   // Basic Info
   const [agentName, setAgentName] = useState("");
   const [description, setDescription] = useState("");
   const [welcomeMessage, setWelcomeMessage] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
+
+  // Pre-fill from task if available
+  useEffect(() => {
+    if (task) {
+      setAgentName(task.title);
+      setDescription(task.description || "");
+    }
+  }, [task]);
 
   // Voice Configuration
   const [voiceConfig, setVoiceConfig] = useState<VoiceConfig>({
@@ -129,7 +174,7 @@ export default function AgentBuilder() {
         throw new Error(bolnaError || "Failed to create agent in Bolna");
       }
 
-      // Save agent to our database
+      // Save agent to our database with task_id if available
       const { error: dbError } = await supabase.from("agents").insert([{
         name: agentName,
         description,
@@ -147,6 +192,7 @@ export default function AgentBuilder() {
         created_by: user?.id || "",
         client_id: user?.id || "",
         status: "pending",
+        task_id: taskId || null,
       }]);
 
       if (dbError) {
@@ -158,7 +204,9 @@ export default function AgentBuilder() {
 
       toast({
         title: "Agent Created!",
-        description: "Your agent has been created and is pending approval.",
+        description: taskId 
+          ? "Your agent has been created. You can now submit the task for review."
+          : "Your agent has been created and is pending approval.",
       });
     } catch (error) {
       console.error("Save error:", error);
@@ -194,9 +242,48 @@ export default function AgentBuilder() {
     }
   };
 
+  const handleGoToTasks = () => {
+    navigate("/engineer/tasks");
+  };
+
+  if (loadingTask) {
+    return (
+      <DashboardLayout role="engineer">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout role="engineer">
       <div className="space-y-8">
+        {/* Task Context Banner */}
+        {task && (
+          <div className="border-2 border-chart-4 bg-chart-4/10 p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <ClipboardList className="h-5 w-5 text-chart-4 mt-0.5" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold">Building Agent for Task</span>
+                    <Badge className="bg-chart-4/20 text-chart-4 border-chart-4">
+                      <Trophy className="h-3 w-3 mr-1" />
+                      {task.points} pts
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">{task.title}</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleGoToTasks}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Tasks
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -206,7 +293,7 @@ export default function AgentBuilder() {
             <div>
               <h1 className="text-2xl font-bold">Agent Builder</h1>
               <p className="text-sm text-muted-foreground">
-                Create and configure voice agents
+                {task ? "Create an agent for your task" : "Create and configure voice agents"}
               </p>
             </div>
           </div>
@@ -241,6 +328,26 @@ export default function AgentBuilder() {
             </Button>
           </div>
         </div>
+
+        {/* Agent Created Success - Show Submit Task Option */}
+        {savedAgentId && task && (
+          <div className="border-2 border-chart-2 bg-chart-2/10 p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="h-5 w-5 text-chart-2 mt-0.5" />
+                <div>
+                  <span className="font-bold text-chart-2">Agent Created Successfully!</span>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Test your agent and then go back to submit the task for review.
+                  </p>
+                </div>
+              </div>
+              <Button onClick={handleGoToTasks} className="bg-chart-2 hover:bg-chart-2/90">
+                Go to Tasks
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Main Editor */}
@@ -316,6 +423,32 @@ You are a friendly customer support agent for Acme Corp. Your role is to help cu
 
           {/* Sidebar Settings */}
           <div className="space-y-6">
+            {/* Task Info Card */}
+            {task && (
+              <div className="border-2 border-chart-4 bg-card p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <ClipboardList className="h-5 w-5 text-chart-4" />
+                  <span className="font-bold">Task Details</span>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Points:</span>
+                    <span className="font-mono font-bold text-chart-4">{task.points} pts</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Status:</span>
+                    <Badge variant="outline">{task.status}</Badge>
+                  </div>
+                  {task.deadline && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Deadline:</span>
+                      <span>{new Date(task.deadline).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* LLM Settings */}
             <div className="border-2 border-border bg-card p-6">
               <LLMSettings value={llmConfig} onChange={setLlmConfig} />
@@ -339,12 +472,12 @@ You are a friendly customer support agent for Acme Corp. Your role is to help cu
 
             {/* Status Card */}
             {savedAgentId ? (
-              <div className="border-2 border-green-500 bg-green-50 dark:bg-green-950 p-4">
-                <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+              <div className="border-2 border-chart-2 bg-chart-2/10 p-4">
+                <div className="flex items-center gap-2 text-chart-2">
                   <CheckCircle2 className="h-5 w-5" />
                   <span className="font-bold">Agent Created</span>
                 </div>
-                <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   ID: {savedAgentId.slice(0, 8)}...
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
