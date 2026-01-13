@@ -94,7 +94,8 @@ export function CreateTaskDialog({ open, onOpenChange, task }: CreateTaskDialogP
         bolna_agent_id: selectedAgentId || null,
         assigned_to: selectedEngineerId || null,
         created_by: user.id,
-        status: selectedEngineerId ? "assigned" : "pending",
+        status: selectedEngineerId ? "in_progress" : "pending",
+        picked_at: selectedEngineerId ? new Date().toISOString() : null,
       };
 
       if (isEditing) {

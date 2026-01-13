@@ -113,7 +113,7 @@ export default function EngineerTasks() {
     },
   });
 
-  // Fetch my tasks (assigned to current user)
+  // Fetch my tasks (assigned to current user) - includes "assigned" status for pre-assigned tasks
   const { data: myTasks = [], isLoading: loadingMyTasks } = useQuery({
     queryKey: ["my-tasks", user?.id],
     queryFn: async () => {
@@ -197,7 +197,8 @@ export default function EngineerTasks() {
     },
   });
 
-  const activeTasks = myTasks.filter((t) => t.status === "in_progress");
+  // Include "assigned" and "pending" (when assigned_to matches) as active tasks
+  const activeTasks = myTasks.filter((t) => ["in_progress", "assigned", "pending"].includes(t.status));
   const submittedTasks = myTasks.filter((t) => t.status === "submitted");
   const completedTasks = myTasks.filter((t) => ["approved", "completed"].includes(t.status));
   const rejectedTasks = myTasks.filter((t) => t.status === "rejected");
