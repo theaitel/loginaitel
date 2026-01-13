@@ -11,9 +11,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Phone, RefreshCw, Bot, DollarSign, Users } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Phone, RefreshCw, Bot, DollarSign, Users, Link } from "lucide-react";
 import { listPhoneNumbers, PhoneNumber } from "@/lib/bolna";
 import { supabase } from "@/integrations/supabase/client";
+import { PhoneNumberAssignment } from "@/components/phone/PhoneNumberAssignment";
 
 // Mask phone number for admin view: +91 ******4321
 const maskPhoneNumber = (phoneNumber: string): string => {
@@ -165,75 +167,92 @@ export default function AdminPhoneNumbers() {
           </Card>
         </div>
 
-        {/* Phone Numbers Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>All Phone Numbers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : phoneNumbers && phoneNumbers.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Phone Number (Masked)</TableHead>
-                    <TableHead>Provider</TableHead>
-                    <TableHead>Assigned Agent</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {phoneNumbers.map((phone) => (
-                    <TableRow key={phone.id}>
-                      <TableCell className="font-mono font-medium">
-                        {maskPhoneNumber(phone.phone_number)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getProviderBadgeVariant(phone.telephony_provider)}>
-                          {phone.telephony_provider}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Bot className="h-4 w-4 text-muted-foreground" />
-                          <span>{getAgentName(phone.agent_id)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                          <span>{getClientName(phone.agent_id)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {phone.rented ? (
-                          <Badge variant="default">Rented</Badge>
-                        ) : phone.agent_id ? (
-                          <Badge variant="secondary">Assigned</Badge>
-                        ) : (
-                          <Badge variant="outline">Available</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {phone.humanized_created_at || new Date(phone.created_at).toLocaleDateString()}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Phone className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No phone numbers found</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Tabs for Overview and Assignment */}
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="assignment">
+              <Link className="h-4 w-4 mr-2" />
+              Assign to Agents
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview">
+            {/* Phone Numbers Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>All Phone Numbers</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : phoneNumbers && phoneNumbers.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Phone Number (Masked)</TableHead>
+                        <TableHead>Provider</TableHead>
+                        <TableHead>Assigned Agent</TableHead>
+                        <TableHead>Client</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {phoneNumbers.map((phone) => (
+                        <TableRow key={phone.id}>
+                          <TableCell className="font-mono font-medium">
+                            {maskPhoneNumber(phone.phone_number)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getProviderBadgeVariant(phone.telephony_provider)}>
+                              {phone.telephony_provider}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Bot className="h-4 w-4 text-muted-foreground" />
+                              <span>{getAgentName(phone.agent_id)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-muted-foreground" />
+                              <span>{getClientName(phone.agent_id)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {phone.rented ? (
+                              <Badge variant="default">Rented</Badge>
+                            ) : phone.agent_id ? (
+                              <Badge variant="secondary">Assigned</Badge>
+                            ) : (
+                              <Badge variant="outline">Available</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {phone.humanized_created_at || new Date(phone.created_at).toLocaleDateString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Phone className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No phone numbers found</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="assignment">
+            <PhoneNumberAssignment showClientColumn={true} />
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );
