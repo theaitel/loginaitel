@@ -35,6 +35,7 @@ const adminNavItems = [
   { icon: Users, label: "Clients", href: "/admin/clients" },
   { icon: ClipboardList, label: "Tasks", href: "/admin/tasks" },
   { icon: Bot, label: "Agents", href: "/admin/agents" },
+  { icon: Mic, label: "Web Call Test", href: "/admin/web-call" },
   { icon: Phone, label: "Calls", href: "/admin/calls" },
   { icon: Layers, label: "Batch Calls", href: "/admin/batches" },
   { icon: Phone, label: "Phone Numbers", href: "/admin/phone-numbers" },
@@ -47,6 +48,7 @@ const engineerNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/engineer" },
   { icon: ClipboardList, label: "My Tasks", href: "/engineer/tasks" },
   { icon: Bot, label: "Agents", href: "/engineer/agents" },
+  { icon: Mic, label: "Web Call Test", href: "/engineer/web-call" },
   { icon: Trophy, label: "Leaderboard", href: "/engineer/leaderboard" },
   { icon: Clock, label: "Time Tracker", href: "/engineer/time" },
   { icon: Settings, label: "Settings", href: "/engineer/settings" },
@@ -55,6 +57,7 @@ const engineerNavItems = [
 const clientNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/client" },
   { icon: Bot, label: "My Agents", href: "/client/agents" },
+  { icon: Mic, label: "Web Call Test", href: "/client/web-call" },
   { icon: Phone, label: "Call Analytics", href: "/client/calls" },
   { icon: Upload, label: "Leads", href: "/client/leads" },
   { icon: Layers, label: "Batch Calls", href: "/client/batches" },

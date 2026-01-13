@@ -42,16 +42,17 @@ serve(async (req) => {
       );
     }
 
-    // Check user role - only engineers and admins can use this
+    // Check user role - engineers, admins, and clients can use this
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (roleData?.role !== "admin" && roleData?.role !== "engineer") {
+    const allowedRoles = ["admin", "engineer", "client"];
+    if (!roleData?.role || !allowedRoles.includes(roleData.role)) {
       return new Response(
-        JSON.stringify({ error: "Forbidden: Only engineers and admins can test agents" }),
+        JSON.stringify({ error: "Forbidden: Access denied" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
