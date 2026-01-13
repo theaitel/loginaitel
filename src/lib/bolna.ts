@@ -299,12 +299,31 @@ export async function updateBolnaAgent(
   return callBolnaProxy<BolnaAgent>("update-agent", { agent_id: agentId }, config);
 }
 
-// Update only the system prompt for an agent
+// Update only the system prompt for an agent (fetches current config first since Bolna API requires agent_config)
 export async function updateBolnaAgentPrompt(
   agentId: string,
   systemPrompt: string
 ): Promise<BolnaResponse<BolnaAgent>> {
+  // First fetch the current agent to get its agent_config (required by Bolna API)
+  const agentResult = await getBolnaAgent(agentId);
+  
+  if (agentResult.error || !agentResult.data) {
+    return { data: null, error: agentResult.error || "Failed to fetch agent" };
+  }
+
+  // Extract the agent_config from the fetched agent (restructure to match API format)
+  const currentAgent = agentResult.data;
+  const agentAny = currentAgent as unknown as Record<string, unknown>;
+  const agentConfig: AgentConfig = {
+    agent_name: currentAgent.agent_name,
+    agent_welcome_message: agentAny.agent_welcome_message as string | undefined,
+    webhook_url: agentAny.webhook_url as string | undefined,
+    agent_type: currentAgent.agent_type,
+    tasks: currentAgent.tasks || [],
+  };
+
   return callBolnaProxy<BolnaAgent>("update-agent", { agent_id: agentId }, {
+    agent_config: agentConfig,
     agent_prompts: {
       task_1: {
         system_prompt: systemPrompt,
