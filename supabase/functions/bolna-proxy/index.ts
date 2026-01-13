@@ -610,6 +610,46 @@ serve(async (req) => {
         break;
       }
 
+      case "assign-phone-number": {
+        // Admin only - assign phone number to an agent
+        if (userRole !== "admin") {
+          return new Response(
+            JSON.stringify({ error: "Forbidden" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const phoneNumberId = body?.phone_number_id;
+        const assignAgentId = body?.agent_id; // null to unassign
+
+        if (!phoneNumberId) {
+          return new Response(
+            JSON.stringify({ error: "phone_number_id is required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Use PATCH /phone-numbers/{phone_number_id} to assign/unassign
+        response = await fetch(`${BOLNA_API_BASE}/phone-numbers/${phoneNumberId}`, {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${BOLNA_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            agent_id: assignAgentId,
+          }),
+        });
+
+        if (response.ok) {
+          return new Response(
+            JSON.stringify({ message: assignAgentId ? "Phone number assigned successfully" : "Phone number unassigned successfully" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        break;
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: `Unknown action: ${action}` }),

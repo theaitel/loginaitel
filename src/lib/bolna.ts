@@ -573,6 +573,17 @@ export async function listPhoneNumbers(): Promise<BolnaResponse<PhoneNumber[]>> 
   return callBolnaProxy<PhoneNumber[]>("list-phone-numbers");
 }
 
+export interface AssignPhoneNumberRequest {
+  phone_number_id: string;
+  agent_id: string | null; // null to unassign
+}
+
+export async function assignPhoneNumberToAgent(
+  options: AssignPhoneNumberRequest
+): Promise<BolnaResponse<{ message: string }>> {
+  return callBolnaProxy<{ message: string }>("assign-phone-number", undefined, options);
+}
+
 // ==========================================
 // HELPER: Build agent config for v2 API
 // ==========================================
