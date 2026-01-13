@@ -21,6 +21,7 @@ import EngineerDashboard from "./pages/engineer/EngineerDashboard";
 import EngineerTasks from "./pages/engineer/EngineerTasks";
 import EngineerLeaderboard from "./pages/engineer/EngineerLeaderboard";
 import EngineerAgentsDashboard from "./pages/engineer/EngineerAgentsDashboard";
+import AgentConfigEditor from "./pages/engineer/AgentConfigEditor";
 import AgentEditor from "./pages/engineer/AgentEditor";
 import WebCallTest from "./pages/engineer/WebCallTest";
 import WebCallTestPage from "./pages/shared/WebCallTestPage";
@@ -161,6 +162,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["engineer"]}>
                   <AgentEditor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/engineer/agent-config"
+              element={
+                <ProtectedRoute allowedRoles={["engineer"]}>
+                  <AgentConfigEditor />
                 </ProtectedRoute>
               }
             />
