@@ -51,11 +51,11 @@ const engineerNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/engineer" },
   { icon: ClipboardList, label: "My Tasks", href: "/engineer/tasks" },
   { icon: Bot, label: "My Workspace", href: "/engineer/agents" },
+  { icon: Settings, label: "Agent Config", href: "/engineer/agent-config" },
   { icon: Phone, label: "Make Call", href: "/engineer/make-call" },
   { icon: Mic, label: "Web Call Test", href: "/engineer/web-call" },
   { icon: Trophy, label: "Leaderboard", href: "/engineer/leaderboard" },
   { icon: Clock, label: "Time Tracker", href: "/engineer/time" },
-  { icon: Settings, label: "Settings", href: "/engineer/settings" },
 ];
 
 const clientNavItems = [

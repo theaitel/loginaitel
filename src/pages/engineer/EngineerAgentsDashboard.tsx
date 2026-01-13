@@ -14,11 +14,11 @@ import {
   Play,
   CheckCircle,
   Trophy,
-  ArrowRight,
   Loader2,
   AlertCircle,
   Timer,
   Eye,
+  Settings,
 } from "lucide-react";
 import { formatDistanceToNow, differenceInMinutes } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -325,10 +325,10 @@ export default function EngineerAgentsDashboard() {
                           <Button
                             size="sm"
                             className="flex-1"
-                            onClick={() => navigate(`/engineer/tasks`)}
+                            onClick={() => navigate(`/engineer/agent-config?agentId=${agent.id}`)}
                           >
-                            <ArrowRight className="h-4 w-4 mr-1" />
-                            Work on Tasks
+                            <Settings className="h-4 w-4 mr-1" />
+                            Configure
                           </Button>
                         </div>
                       </CardContent>
