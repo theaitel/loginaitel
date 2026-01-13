@@ -21,6 +21,7 @@ import {
   AlertCircle,
   MoreVertical,
   Bot,
+  XCircle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -29,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CreateTaskDialog } from "@/components/admin/CreateTaskDialog";
+import { TaskReviewDialog } from "@/components/admin/TaskReviewDialog";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
@@ -58,6 +60,11 @@ const statusConfig = {
     icon: ClipboardList,
     className: "bg-muted border-border text-muted-foreground",
   },
+  rejected: {
+    label: "Rejected",
+    icon: XCircle,
+    className: "bg-destructive/10 border-destructive text-destructive",
+  },
 };
 
 export default function AdminTasks() {
@@ -65,6 +72,8 @@ export default function AdminTasks() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [reviewingTask, setReviewingTask] = useState<any>(null);
 
   const { data: tasks, isLoading } = useQuery({
     queryKey: ["admin-tasks"],
@@ -137,6 +146,11 @@ export default function AdminTasks() {
   const handleCreate = () => {
     setEditingTask(null);
     setDialogOpen(true);
+  };
+
+  const handleReview = (task: any) => {
+    setReviewingTask(task);
+    setReviewDialogOpen(true);
   };
 
   return (
@@ -220,6 +234,7 @@ export default function AdminTasks() {
                 filteredTasks?.map((task) => {
                   const status = statusConfig[task.status as keyof typeof statusConfig] || statusConfig.pending;
                   const StatusIcon = status.icon;
+                  const isPendingReview = task.status === "pending_review";
                   return (
                     <TableRow key={task.id} className="border-b-2 border-border">
                       <TableCell className="font-medium">{task.title}</TableCell>
@@ -258,6 +273,11 @@ export default function AdminTasks() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            {isPendingReview && (
+                              <DropdownMenuItem onClick={() => handleReview(task)}>
+                                Review Submission
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem onClick={() => handleEdit(task)}>
                               Edit Task
                             </DropdownMenuItem>
@@ -283,6 +303,13 @@ export default function AdminTasks() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         task={editingTask}
+      />
+
+      <TaskReviewDialog
+        open={reviewDialogOpen}
+        onOpenChange={setReviewDialogOpen}
+        task={reviewingTask}
+        engineerName={getEngineerName(reviewingTask?.assigned_to)}
       />
     </DashboardLayout>
   );
