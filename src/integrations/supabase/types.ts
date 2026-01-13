@@ -24,6 +24,7 @@ export type Database = {
           name: string
           status: string
           system_prompt: string | null
+          task_id: string | null
           updated_at: string
           voice_config: Json | null
         }
@@ -36,6 +37,7 @@ export type Database = {
           name: string
           status?: string
           system_prompt?: string | null
+          task_id?: string | null
           updated_at?: string
           voice_config?: Json | null
         }
@@ -48,10 +50,19 @@ export type Database = {
           name?: string
           status?: string
           system_prompt?: string | null
+          task_id?: string | null
           updated_at?: string
           voice_config?: Json | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "agents_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       calls: {
         Row: {

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -15,6 +14,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -29,6 +29,7 @@ import {
   Trophy,
   ArrowRight,
   Loader2,
+  Bot,
 } from "lucide-react";
 import { formatDistanceToNow, format, differenceInMinutes } from "date-fns";
 
@@ -87,6 +88,7 @@ const getStatusLabel = (status: string) => {
 export default function EngineerTasks() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showPickDialog, setShowPickDialog] = useState(false);
@@ -205,6 +207,10 @@ export default function EngineerTasks() {
   const handleSubmitTask = (task: Task) => {
     setSelectedTask(task);
     setShowSubmitDialog(true);
+  };
+
+  const handleBuildAgent = (task: Task) => {
+    navigate(`/engineer/agents?taskId=${task.id}`);
   };
 
   const getTimeRemaining = (deadline: string | null) => {
@@ -415,10 +421,16 @@ export default function EngineerTasks() {
                           </span>
                         </div>
                       </div>
-                      <Button onClick={() => handleSubmitTask(task)} className="shrink-0">
-                        <Send className="h-4 w-4 mr-2" />
-                        Re-submit
-                      </Button>
+                      <div className="flex gap-2 shrink-0">
+                        <Button variant="outline" onClick={() => handleBuildAgent(task)}>
+                          <Bot className="h-4 w-4 mr-2" />
+                          Edit Agent
+                        </Button>
+                        <Button onClick={() => handleSubmitTask(task)}>
+                          <Send className="h-4 w-4 mr-2" />
+                          Re-submit
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -472,10 +484,16 @@ export default function EngineerTasks() {
                           )}
                         </div>
                       </div>
-                      <Button onClick={() => handleSubmitTask(task)} className="shrink-0">
-                        <Send className="h-4 w-4 mr-2" />
-                        Submit for Review
-                      </Button>
+                      <div className="flex gap-2 shrink-0">
+                        <Button variant="outline" onClick={() => handleBuildAgent(task)}>
+                          <Bot className="h-4 w-4 mr-2" />
+                          Build Agent
+                        </Button>
+                        <Button onClick={() => handleSubmitTask(task)}>
+                          <Send className="h-4 w-4 mr-2" />
+                          Submit
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
