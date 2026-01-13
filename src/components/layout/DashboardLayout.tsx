@@ -50,7 +50,7 @@ const adminNavItems = [
 const engineerNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/engineer" },
   { icon: ClipboardList, label: "My Tasks", href: "/engineer/tasks" },
-  { icon: Bot, label: "Agents", href: "/engineer/agents" },
+  { icon: Bot, label: "My Workspace", href: "/engineer/agents" },
   { icon: Phone, label: "Make Call", href: "/engineer/make-call" },
   { icon: Mic, label: "Web Call Test", href: "/engineer/web-call" },
   { icon: Trophy, label: "Leaderboard", href: "/engineer/leaderboard" },
