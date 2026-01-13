@@ -59,6 +59,7 @@ export type Database = {
       calls: {
         Row: {
           agent_id: string
+          batch_id: string | null
           client_id: string
           connected: boolean | null
           created_at: string
@@ -78,6 +79,7 @@ export type Database = {
         }
         Insert: {
           agent_id: string
+          batch_id?: string | null
           client_id: string
           connected?: boolean | null
           created_at?: string
@@ -97,6 +99,7 @@ export type Database = {
         }
         Update: {
           agent_id?: string
+          batch_id?: string | null
           client_id?: string
           connected?: boolean | null
           created_at?: string
