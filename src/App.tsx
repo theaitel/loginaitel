@@ -20,6 +20,7 @@ import BatchAnalytics from "./pages/client/BatchAnalytics";
 import EngineerDashboard from "./pages/engineer/EngineerDashboard";
 import EngineerTasks from "./pages/engineer/EngineerTasks";
 import EngineerLeaderboard from "./pages/engineer/EngineerLeaderboard";
+import EngineerAgentsDashboard from "./pages/engineer/EngineerAgentsDashboard";
 import AgentEditor from "./pages/engineer/AgentEditor";
 import WebCallTest from "./pages/engineer/WebCallTest";
 import WebCallTestPage from "./pages/shared/WebCallTestPage";
@@ -149,6 +150,14 @@ const App = () => (
             />
             <Route
               path="/engineer/agents"
+              element={
+                <ProtectedRoute allowedRoles={["engineer"]}>
+                  <EngineerAgentsDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/engineer/agent-editor"
               element={
                 <ProtectedRoute allowedRoles={["engineer"]}>
                   <AgentEditor />
