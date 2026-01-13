@@ -6,24 +6,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Mic } from "lucide-react";
 
-const TRANSCRIBER_MODELS = [
-  { id: "nova-3", name: "Nova 3", provider: "deepgram", description: "Latest & most accurate" },
-  { id: "nova-2", name: "Nova 2", provider: "deepgram", description: "High quality" },
-  { id: "nova-2-phonecall", name: "Nova 2 (Phone Call)", provider: "deepgram", description: "Optimized for phone calls" },
-  { id: "nova-2-conversationalai", name: "Nova 2 (Conversational AI)", provider: "deepgram", description: "Optimized for AI conversations" },
+// Transcriber providers - renamed for Aitel branding
+const TRANSCRIBER_PROVIDERS = [
+  { id: "azure", name: "Aitel Transcriber 01", description: "High accuracy, enterprise-grade" },
+  { id: "sarvam", name: "Aitel Transcriber 02", description: "Optimized for Indian languages" },
 ];
 
+// Regional + English languages
 const LANGUAGES = [
   { id: "en", name: "English" },
-  { id: "hi", name: "Hindi" },
-  { id: "es", name: "Spanish" },
-  { id: "fr", name: "French" },
+  { id: "hi", name: "Hindi (हिन्दी)" },
+  { id: "ta", name: "Tamil (தமிழ்)" },
+  { id: "te", name: "Telugu (తెలుగు)" },
+  { id: "kn", name: "Kannada (ಕನ್ನಡ)" },
+  { id: "ml", name: "Malayalam (മലയാളം)" },
+  { id: "mr", name: "Marathi (मराठी)" },
+  { id: "bn", name: "Bengali (বাংলা)" },
+  { id: "gu", name: "Gujarati (ગુજરાતી)" },
+  { id: "pa", name: "Punjabi (ਪੰਜਾਬੀ)" },
+  { id: "or", name: "Odia (ଓଡ଼ିଆ)" },
 ];
 
 export interface TranscriberConfig {
-  model: string;
+  provider: string;
   language: string;
 }
 
@@ -33,7 +41,8 @@ interface TranscriberSettingsProps {
 }
 
 export function TranscriberSettings({ value, onChange }: TranscriberSettingsProps) {
-  const selectedModel = TRANSCRIBER_MODELS.find((m) => m.id === value.model);
+  const selectedProvider = TRANSCRIBER_PROVIDERS.find((p) => p.id === value.provider);
+  const selectedLanguage = LANGUAGES.find((l) => l.id === value.language);
 
   return (
     <div className="space-y-4">
@@ -42,22 +51,22 @@ export function TranscriberSettings({ value, onChange }: TranscriberSettingsProp
         <h2 className="font-bold">Transcriber (STT)</h2>
       </div>
 
-      {/* Model Selection */}
+      {/* Provider Selection */}
       <div className="space-y-2">
-        <Label>Model</Label>
+        <Label>Provider</Label>
         <Select
-          value={value.model}
-          onValueChange={(model) => onChange({ ...value, model })}
+          value={value.provider}
+          onValueChange={(provider) => onChange({ ...value, provider })}
         >
           <SelectTrigger className="border-2">
-            <SelectValue placeholder="Select model" />
+            <SelectValue placeholder="Select provider" />
           </SelectTrigger>
           <SelectContent>
-            {TRANSCRIBER_MODELS.map((model) => (
-              <SelectItem key={model.id} value={model.id}>
+            {TRANSCRIBER_PROVIDERS.map((provider) => (
+              <SelectItem key={provider.id} value={provider.id}>
                 <div className="flex flex-col">
-                  <span>{model.name}</span>
-                  <span className="text-xs text-muted-foreground">{model.description}</span>
+                  <span>{provider.name}</span>
+                  <span className="text-xs text-muted-foreground">{provider.description}</span>
                 </div>
               </SelectItem>
             ))}
@@ -86,15 +95,20 @@ export function TranscriberSettings({ value, onChange }: TranscriberSettingsProp
       </div>
 
       {/* Provider Info */}
-      {selectedModel && (
-        <div className="p-3 bg-muted/50 border border-border text-xs">
-          <p className="text-muted-foreground">
-            Provider: <span className="font-medium capitalize">{selectedModel.provider}</span>
-          </p>
+      {selectedProvider && selectedLanguage && (
+        <div className="p-3 bg-muted/50 border border-border text-sm space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Provider:</span>
+            <Badge variant="secondary">{selectedProvider.name}</Badge>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Language:</span>
+            <span className="font-medium">{selectedLanguage.name}</span>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-export { TRANSCRIBER_MODELS, LANGUAGES };
+export { TRANSCRIBER_PROVIDERS, LANGUAGES };

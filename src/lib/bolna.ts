@@ -137,7 +137,25 @@ export interface SynthesizerConfig {
 export interface DeepgramTranscriberConfig {
   provider: "deepgram";
   model: "nova-3" | "nova-2" | "nova-2-phonecall" | "nova-2-conversationalai";
-  language: "en" | "hi" | "es" | "fr";
+  language: string;
+  stream?: boolean;
+  sampling_rate?: number;
+  encoding?: "linear16";
+  endpointing?: number;
+}
+
+export interface AzureTranscriberConfig {
+  provider: "azure";
+  language: string;
+  stream?: boolean;
+  sampling_rate?: number;
+  encoding?: "linear16";
+  endpointing?: number;
+}
+
+export interface SarvamTranscriberConfig {
+  provider: "sarvam";
+  language: string;
   stream?: boolean;
   sampling_rate?: number;
   encoding?: "linear16";
@@ -154,7 +172,7 @@ export interface BodhiTranscriberConfig {
   endpointing?: number;
 }
 
-export type TranscriberConfig = DeepgramTranscriberConfig | BodhiTranscriberConfig;
+export type TranscriberConfig = DeepgramTranscriberConfig | AzureTranscriberConfig | SarvamTranscriberConfig | BodhiTranscriberConfig;
 
 // Input/Output Configuration
 export interface InputOutputConfig {
@@ -374,8 +392,8 @@ export interface BuildAgentOptions {
   temperature: number;
   maxTokens: number;
   // Transcriber config
-  transcriberModel: string;
-  language: "en" | "hi" | "es" | "fr";
+  transcriberProvider: "azure" | "sarvam";
+  language: string;
   // Telephony config
   telephonyProvider: "twilio" | "plivo" | "exotel";
   // Conversation config
@@ -442,14 +460,13 @@ export function buildAgentConfig(options: BuildAgentOptions): CreateAgentRequest
             },
             synthesizer: synthesizerConfig,
             transcriber: {
-              provider: "deepgram",
-              model: options.transcriberModel as "nova-3" | "nova-2" | "nova-2-phonecall" | "nova-2-conversationalai",
+              provider: options.transcriberProvider,
               language: options.language,
               stream: true,
               sampling_rate: 16000,
               encoding: "linear16",
               endpointing: 250,
-            },
+            } as TranscriberConfig,
             input: {
               provider: options.telephonyProvider,
               format: "wav",

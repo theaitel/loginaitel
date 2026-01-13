@@ -42,18 +42,18 @@ export default function AgentBuilder() {
     voiceName: CARTESIA_VOICES[0].name,
   });
 
-  // LLM Configuration
+  // LLM Configuration - Default to GPT-4.1 Nano
   const [llmConfig, setLlmConfig] = useState<LLMConfig>({
-    model: LLM_MODELS[0].id,
-    provider: LLM_MODELS[0].provider,
-    family: LLM_MODELS[0].family,
+    model: "gpt-4.1-nano",
+    provider: "openai",
+    family: "openai",
     temperature: 0.1,
     maxTokens: 150,
   });
 
-  // Transcriber Configuration
+  // Transcriber Configuration - Default to Aitel Transcriber 01 (Azure)
   const [transcriberConfig, setTranscriberConfig] = useState<TranscriberConfig>({
-    model: "nova-3",
+    provider: "azure",
     language: "en",
   });
 
@@ -108,8 +108,8 @@ export default function AgentBuilder() {
         llmModel: llmConfig.model,
         temperature: llmConfig.temperature,
         maxTokens: llmConfig.maxTokens,
-        transcriberModel: transcriberConfig.model,
-        language: transcriberConfig.language as "en" | "hi" | "es" | "fr",
+        transcriberProvider: transcriberConfig.provider as "azure" | "sarvam",
+        language: transcriberConfig.language,
         telephonyProvider: telephonyConfig.provider,
         hangupAfterSilence: conversationConfig.hangupAfterSilence,
         callTerminate: conversationConfig.callTerminate,

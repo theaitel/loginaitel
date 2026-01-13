@@ -8,18 +8,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Settings } from "lucide-react";
 
+// LLM Models available in Bolna
 const LLM_MODELS = [
-  { id: "gpt-4.1-mini", name: "GPT-4.1 Mini", provider: "openai", family: "openai" },
-  { id: "gpt-4.1", name: "GPT-4.1", provider: "openai", family: "openai" },
-  { id: "gpt-4o", name: "GPT-4o", provider: "openai", family: "openai" },
-  { id: "gpt-4o-mini", name: "GPT-4o Mini", provider: "openai", family: "openai" },
-  { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", provider: "openai", family: "openai" },
-  { id: "claude-3-5-sonnet-20241022", name: "Claude 3.5 Sonnet", provider: "anthropic", family: "anthropic" },
-  { id: "claude-3-haiku-20240307", name: "Claude 3 Haiku", provider: "anthropic", family: "anthropic" },
-  { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", provider: "google", family: "google" },
-  { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", provider: "google", family: "google" },
+  { id: "gpt-4.1-nano", name: "GPT-4.1 Nano", provider: "openai", family: "openai", description: "Fast & cost-effective (Default)" },
+  { id: "gpt-4.1-mini", name: "GPT-4.1 Mini", provider: "openai", family: "openai", description: "Balanced performance" },
+  { id: "gpt-4.1", name: "GPT-4.1", provider: "openai", family: "openai", description: "High accuracy" },
+  { id: "gpt-4o-mini", name: "GPT-4o Mini", provider: "openai", family: "openai", description: "Multimodal capable" },
 ];
 
 export interface LLMConfig {
@@ -68,11 +65,14 @@ export function LLMSettings({ value, onChange }: LLMSettingsProps) {
           <SelectContent>
             {LLM_MODELS.map((model) => (
               <SelectItem key={model.id} value={model.id}>
-                <div className="flex items-center gap-2">
-                  <span>{model.name}</span>
-                  <span className="text-xs text-muted-foreground capitalize">
-                    ({model.provider})
-                  </span>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span>{model.name}</span>
+                    {model.id === "gpt-4.1-nano" && (
+                      <Badge variant="default" className="text-xs">Default</Badge>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground">{model.description}</span>
                 </div>
               </SelectItem>
             ))}
@@ -97,7 +97,7 @@ export function LLMSettings({ value, onChange }: LLMSettingsProps) {
           className="cursor-pointer"
         />
         <p className="text-xs text-muted-foreground">
-          Lower = more focused responses, Higher = more creative
+          Lower = more focused, Higher = more creative
         </p>
       </div>
 
