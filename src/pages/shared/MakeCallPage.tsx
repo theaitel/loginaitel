@@ -36,6 +36,7 @@ interface Agent {
   agent_name: string;
   bolna_agent_id: string;
   client_id: string | null;
+  engineer_id?: string | null;
 }
 
 interface Lead {
@@ -110,6 +111,12 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
 
       if (role === "client" && user) {
         query = query.eq("client_id", user.id);
+      }
+
+      // Engineers can only create leads for clients tied to agents assigned to them.
+      // Filter here to avoid selecting an agent that will later fail RLS on leads insert.
+      if (role === "engineer" && user) {
+        query = query.eq("engineer_id", user.id).not("client_id", "is", null);
       }
 
       const { data, error } = await query.order("agent_name");
@@ -482,7 +489,9 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
                   </Select>
                 ) : (
                   <p className="text-sm text-muted-foreground p-3 bg-muted/50 border-2 border-border">
-                    No agents available. Please contact admin to assign agents.
+                    {role === "engineer"
+                      ? "No eligible agents assigned to you. Ask an admin to assign you an agent and a client."
+                      : "No agents available. Please contact admin to assign agents."}
                   </p>
                 )}
               </div>
