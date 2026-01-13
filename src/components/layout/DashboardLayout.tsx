@@ -56,6 +56,7 @@ const engineerNavItems = [
   { icon: Mic, label: "Web Call Test", href: "/engineer/web-call" },
   { icon: Trophy, label: "Leaderboard", href: "/engineer/leaderboard" },
   { icon: Clock, label: "Time Tracker", href: "/engineer/time" },
+  { icon: Settings, label: "Settings & API Test", href: "/engineer/settings" },
 ];
 
 const clientNavItems = [
