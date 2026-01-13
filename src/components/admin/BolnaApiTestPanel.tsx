@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Copy,
   Zap,
+  Edit,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -37,6 +38,7 @@ export function BolnaApiTestPanel() {
   const [results, setResults] = useState<TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [agentId, setAgentId] = useState("");
+  const [testPrompt, setTestPrompt] = useState("You are a helpful assistant. This is a test prompt update.");
   const [expandedResults, setExpandedResults] = useState<Set<number>>(new Set());
 
   const addResult = (result: TestResult) => {
@@ -52,7 +54,8 @@ export function BolnaApiTestPanel() {
   const callBolnaProxy = async (
     action: string,
     params: Record<string, string> = {},
-    body?: unknown
+    body?: unknown,
+    method?: "GET" | "POST" | "PUT"
   ): Promise<{ data: unknown; error: unknown; status: number; duration: number }> => {
     const startTime = Date.now();
     
@@ -61,8 +64,10 @@ export function BolnaApiTestPanel() {
     
     const { data: { session } } = await supabase.auth.getSession();
     
+    const httpMethod = method || (body ? "POST" : "GET");
+    
     const response = await fetch(url, {
-      method: body ? "POST" : "GET",
+      method: httpMethod,
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${session?.access_token}`,
@@ -194,15 +199,16 @@ export function BolnaApiTestPanel() {
     }
   };
 
-  const runSingleTest = async (action: string, params: Record<string, string> = {}) => {
+  const runSingleTest = async (action: string, params: Record<string, string> = {}, body?: unknown, method?: "GET" | "POST" | "PUT") => {
     const idx = results.length;
+    const displayMethod = method || (body ? "POST" : "GET");
     addResult({
       endpoint: action,
-      method: params.agent_id ? "GET (with param)" : "GET",
+      method: displayMethod,
       status: "pending",
     });
 
-    const result = await callBolnaProxy(action, params);
+    const result = await callBolnaProxy(action, params, body, method);
     updateResult(idx, {
       status: result.error ? "error" : "success",
       statusCode: result.status,
@@ -210,6 +216,114 @@ export function BolnaApiTestPanel() {
       response: result.data,
       error: result.error ? JSON.stringify(result.error) : undefined,
     });
+
+    return result;
+  };
+
+  const runUpdatePromptTest = async () => {
+    if (!agentId) {
+      toast.error("Please enter an Agent ID to test PUT update");
+      return;
+    }
+
+    setIsRunning(true);
+    
+    // Step 1: GET current agent config
+    const getIdx = results.length;
+    addResult({
+      endpoint: `get-agent (before update)`,
+      method: "GET",
+      status: "pending",
+    });
+
+    const getResult = await callBolnaProxy("get-agent", { agent_id: agentId });
+    updateResult(getIdx, {
+      status: getResult.error ? "error" : "success",
+      statusCode: getResult.status,
+      duration: getResult.duration,
+      response: getResult.data,
+      error: getResult.error ? JSON.stringify(getResult.error) : undefined,
+    });
+
+    if (getResult.error) {
+      toast.error("Failed to fetch agent for update test");
+      setIsRunning(false);
+      return;
+    }
+
+    // Extract original prompt for comparison
+    const agentData = getResult.data as Record<string, unknown>;
+    const originalPrompt = (agentData?.agent_prompts as Record<string, unknown>)?.task_1 as Record<string, string> | undefined;
+    const originalSystemPrompt = originalPrompt?.system_prompt || "N/A";
+
+    // Step 2: PUT update with new system prompt
+    const putIdx = results.length;
+    addResult({
+      endpoint: `update-agent (PUT)`,
+      method: "PUT",
+      status: "pending",
+    });
+
+    const updateBody = {
+      agent_prompts: {
+        task_1: {
+          system_prompt: testPrompt
+        }
+      }
+    };
+
+    const putResult = await callBolnaProxy("update-agent", { agent_id: agentId }, updateBody, "PUT");
+    
+    updateResult(putIdx, {
+      status: putResult.error ? "error" : "success",
+      statusCode: putResult.status,
+      duration: putResult.duration,
+      response: putResult.data,
+      error: putResult.error ? JSON.stringify(putResult.error) : undefined,
+    });
+
+    if (putResult.error) {
+      toast.error("PUT update failed");
+      setIsRunning(false);
+      return;
+    }
+
+    // Step 3: GET agent again to verify change
+    const verifyIdx = results.length;
+    addResult({
+      endpoint: `get-agent (verify update)`,
+      method: "GET",
+      status: "pending",
+    });
+
+    const verifyResult = await callBolnaProxy("get-agent", { agent_id: agentId });
+    const verifyData = verifyResult.data as Record<string, unknown>;
+    const newPrompt = (verifyData?.agent_prompts as Record<string, unknown>)?.task_1 as Record<string, string> | undefined;
+    const newSystemPrompt = newPrompt?.system_prompt || "N/A";
+    
+    const promptChanged = newSystemPrompt === testPrompt;
+    
+    updateResult(verifyIdx, {
+      status: verifyResult.error ? "error" : (promptChanged ? "success" : "error"),
+      statusCode: verifyResult.status,
+      duration: verifyResult.duration,
+      response: {
+        verification: promptChanged ? "✅ Prompt updated successfully!" : "❌ Prompt did NOT change",
+        original_prompt: originalSystemPrompt.slice(0, 100) + "...",
+        expected_prompt: testPrompt.slice(0, 100) + "...",
+        actual_prompt: newSystemPrompt.slice(0, 100) + "...",
+        full_response: verifyResult.data,
+      },
+      error: verifyResult.error ? JSON.stringify(verifyResult.error) : undefined,
+    });
+
+    if (promptChanged) {
+      toast.success("PUT test passed! System prompt was updated and verified.");
+    } else {
+      toast.error("PUT test failed! Prompt was not updated.");
+    }
+
+    setIsRunning(false);
   };
 
   const toggleExpanded = (index: number) => {
@@ -291,6 +405,45 @@ export function BolnaApiTestPanel() {
               )}
             </Button>
           </div>
+        </div>
+
+        {/* PUT Test Section */}
+        <div className="space-y-2 p-4 border-2 border-dashed border-chart-4/50 bg-chart-4/5">
+          <div className="flex items-center gap-2 mb-2">
+            <Edit className="h-4 w-4 text-chart-4" />
+            <span className="font-medium text-sm">PUT Test: Update System Prompt</span>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="test-prompt">New System Prompt</Label>
+            <Textarea
+              id="test-prompt"
+              placeholder="Enter new system prompt to test..."
+              value={testPrompt}
+              onChange={(e) => setTestPrompt(e.target.value)}
+              className="min-h-[80px]"
+            />
+          </div>
+          <Button
+            onClick={runUpdatePromptTest}
+            disabled={isRunning || !agentId}
+            className="w-full"
+            variant="secondary"
+          >
+            {isRunning ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Testing PUT Update...
+              </>
+            ) : (
+              <>
+                <Edit className="h-4 w-4 mr-2" />
+                Run PUT Update Test
+              </>
+            )}
+          </Button>
+          {!agentId && (
+            <p className="text-xs text-muted-foreground">Enter an Agent ID above to enable PUT testing</p>
+          )}
         </div>
 
         {/* Individual Test Buttons */}
