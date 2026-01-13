@@ -188,7 +188,7 @@ export default function CreateBatchCampaign() {
   };
 
   const downloadSampleCsv = () => {
-    const sampleCsv = `recipient_phone_number,name,company
+    const sampleCsv = `contact_number,name,company
 +919876543210,John Doe,Acme Corp
 +919876543211,Jane Smith,Tech Inc
 +919876543212,Bob Johnson,StartupXYZ`;
@@ -205,7 +205,7 @@ export default function CreateBatchCampaign() {
   // Generate CSV from selected leads
   const generateCsvFromLeads = () => {
     const selectedLeadsList = leads?.filter((l) => selectedLeads.has(l.id)) || [];
-    const csvHeader = "recipient_phone_number,name,email";
+    const csvHeader = "contact_number,name,email";
     const csvRows = selectedLeadsList.map(
       (lead) => `${lead.phone_number},${lead.name || ""},${lead.email || ""}`
     );
