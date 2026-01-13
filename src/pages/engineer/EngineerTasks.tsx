@@ -167,19 +167,35 @@ export default function EngineerTasks() {
   // Submit task mutation
   const submitTaskMutation = useMutation({
     mutationFn: async ({ taskId, notes }: { taskId: string; notes: string }) => {
-      const { error } = await supabase
+      console.log("Submitting task:", taskId, "by user:", user?.id);
+      
+      const { data, error, count } = await supabase
         .from("tasks")
         .update({
           status: "submitted",
           description: notes ? `${selectedTask?.description || ""}\n\n---\nSubmission Notes: ${notes}` : selectedTask?.description,
         })
         .eq("id", taskId)
-        .eq("assigned_to", user?.id);
+        .eq("assigned_to", user?.id)
+        .select();
 
-      if (error) throw error;
+      console.log("Submit result:", { data, error, count });
+
+      if (error) {
+        console.error("Submit error:", error);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        console.error("No rows updated - RLS policy may be blocking");
+        throw new Error("Task update failed. You may not have permission to submit this task.");
+      }
+      
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["available-tasks"] });
       setShowSubmitDialog(false);
       setSelectedTask(null);
       setSubmissionNotes("");
@@ -188,10 +204,11 @@ export default function EngineerTasks() {
         description: "Your task has been submitted for admin review.",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
+      console.error("Submit mutation error:", error);
       toast({
         title: "Error",
-        description: "Failed to submit task. Please try again.",
+        description: error.message || "Failed to submit task. Please try again.",
         variant: "destructive",
       });
     },
