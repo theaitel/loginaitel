@@ -39,9 +39,9 @@ const adminNavItems = [
   { icon: Mic, label: "Web Call Test", href: "/admin/web-call" },
   { icon: Phone, label: "Calls", href: "/admin/calls" },
   { icon: Layers, label: "Batch Calls", href: "/admin/batches" },
+  { icon: BarChart3, label: "Batch Analytics", href: "/admin/batch-analytics" },
   { icon: Phone, label: "Phone Numbers", href: "/admin/phone-numbers" },
   { icon: CreditCard, label: "Credits", href: "/admin/credits" },
-  { icon: BarChart3, label: "Analytics", href: "/admin/analytics" },
   { icon: Settings, label: "Settings", href: "/admin/settings" },
 ];
 
@@ -61,9 +61,10 @@ const clientNavItems = [
   { icon: Bot, label: "My Agents", href: "/client/agents" },
   { icon: Phone, label: "Make Call", href: "/client/make-call" },
   { icon: Mic, label: "Web Call Test", href: "/client/web-call" },
-  { icon: Phone, label: "Call Analytics", href: "/client/calls" },
+  { icon: Phone, label: "Call History", href: "/client/calls" },
   { icon: Upload, label: "Leads", href: "/client/leads" },
   { icon: Layers, label: "Batch Calls", href: "/client/batches" },
+  { icon: BarChart3, label: "Batch Analytics", href: "/client/batch-analytics" },
   { icon: Phone, label: "Phone Numbers", href: "/client/phone-numbers" },
   { icon: CreditCard, label: "Credits & Billing", href: "/client/billing" },
   { icon: Settings, label: "Settings", href: "/client/settings" },
