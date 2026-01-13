@@ -20,6 +20,7 @@ import EngineerDashboard from "./pages/engineer/EngineerDashboard";
 import EngineerTasks from "./pages/engineer/EngineerTasks";
 import EngineerLeaderboard from "./pages/engineer/EngineerLeaderboard";
 import AgentEditor from "./pages/engineer/AgentEditor";
+import WebCallTest from "./pages/engineer/WebCallTest";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminAgents from "./pages/admin/AdminAgents";
 import AdminCalls from "./pages/admin/AdminCalls";
@@ -133,6 +134,22 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["engineer"]}>
                   <EngineerTasks />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/engineer/agent"
+              element={
+                <ProtectedRoute allowedRoles={["engineer"]}>
+                  <AgentEditor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/engineer/web-call"
+              element={
+                <ProtectedRoute allowedRoles={["engineer"]}>
+                  <WebCallTest />
                 </ProtectedRoute>
               }
             />
