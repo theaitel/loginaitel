@@ -284,10 +284,16 @@ export default function AgentEditor() {
           <div className="flex gap-3">
             <Button
               variant="outline"
-              onClick={() => setTestDialogOpen(true)}
+              onClick={() => navigate(`/engineer/web-call?agentId=${agent.id}&taskId=${taskId}`)}
             >
               <Play className="h-4 w-4 mr-2" />
-              Test Agent
+              Web Call Test
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setTestDialogOpen(true)}
+            >
+              Phone Test
             </Button>
             <Button
               onClick={handleSave}
