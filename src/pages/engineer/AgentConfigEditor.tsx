@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { updateBolnaAgentPrompt } from "@/lib/aitel";
+import { updateAitelAgentPrompt } from "@/lib/aitel";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -90,13 +90,13 @@ export default function AgentConfigEditor() {
       if (!selectedAgentId || !selectedAgent) throw new Error("No agent selected");
 
       // First, update in Aitel API (two-way sync)
-      const bolnaResponse = await updateBolnaAgentPrompt(
+      const aitelResponse = await updateAitelAgentPrompt(
         selectedAgent.external_agent_id,
         systemPrompt
       );
 
-      if (bolnaResponse.error) {
-        throw new Error(`Failed to sync agent: ${bolnaResponse.error}`);
+      if (aitelResponse.error) {
+        throw new Error(`Failed to sync agent: ${aitelResponse.error}`);
       }
 
       // Then update in local database

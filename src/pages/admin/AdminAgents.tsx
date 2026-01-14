@@ -27,7 +27,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { listBolnaAgents, getBolnaAgent } from "@/lib/aitel";
+import { listAitelAgents, getAitelAgent } from "@/lib/aitel";
 import {
   Bot,
   RefreshCw,
@@ -117,22 +117,22 @@ export default function AdminAgents() {
     },
   });
 
-  // Sync agents from Bolna
+  // Sync agents from Aitel
   const handleSyncAgents = async () => {
     setIsSyncing(true);
     try {
-      const { data: bolnaAgents, error } = await listBolnaAgents();
+      const { data: aitelAgents, error } = await listAitelAgents();
 
-      if (error || !bolnaAgents) {
+      if (error || !aitelAgents) {
         throw new Error(error || "Failed to fetch agents");
       }
 
       let synced = 0;
       let updated = 0;
 
-      for (const agent of bolnaAgents as BolnaAgentFromAPI[]) {
+      for (const agent of aitelAgents as BolnaAgentFromAPI[]) {
         // Get full agent details including prompts
-        const { data: fullAgent } = await getBolnaAgent(agent.id);
+        const { data: fullAgent } = await getAitelAgent(agent.id);
         
         const systemPrompt = (fullAgent as BolnaAgentFromAPI)?.agent_prompts?.task_1?.system_prompt || "";
         const agentConfig = fullAgent || agent;
