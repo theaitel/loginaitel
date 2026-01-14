@@ -65,6 +65,14 @@ interface CallCount {
   last_call: string | null;
 }
 
+// Statuses that allow call testing (prompt approved or later)
+const CALL_ALLOWED_STATUSES = [
+  'prompt_approved',
+  'demo_in_progress', 
+  'demo_submitted',
+  'completed'
+];
+
 const statusConfig: Record<string, { label: string; icon: React.ElementType; className: string }> = {
   pending: {
     label: "Pending",
@@ -123,6 +131,9 @@ export default function ClientLeads({ role = "client" }: LeadsPageProps) {
     callbacks: 0,
     completed: 0,
   });
+
+  // Track if engineer has any approved prompts (for call restriction)
+  const [hasApprovedPrompts, setHasApprovedPrompts] = useState(false);
 
   const fetchLeads = useCallback(async () => {
     if (!user) return;
@@ -235,10 +246,34 @@ export default function ClientLeads({ role = "client" }: LeadsPageProps) {
     }
   }, [user, effectiveRole]);
 
+  // Check if engineer has approved prompts for call testing
+  const checkApprovedPrompts = useCallback(async () => {
+    if (!user || effectiveRole !== "engineer") {
+      setHasApprovedPrompts(true); // Admins and clients can always make calls
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("id")
+        .eq("assigned_to", user.id)
+        .in("status", CALL_ALLOWED_STATUSES)
+        .limit(1);
+
+      if (error) throw error;
+      setHasApprovedPrompts(data && data.length > 0);
+    } catch (err) {
+      console.error("Check approved prompts error:", err);
+      setHasApprovedPrompts(false);
+    }
+  }, [user, effectiveRole]);
+
   useEffect(() => {
     fetchLeads();
     fetchAgents();
-  }, [fetchLeads, fetchAgents]);
+    checkApprovedPrompts();
+  }, [fetchLeads, fetchAgents, checkApprovedPrompts]);
 
   const handleTriggerCall = (lead: Lead) => {
     setSelectedLead(lead);
@@ -441,6 +476,8 @@ export default function ClientLeads({ role = "client" }: LeadsPageProps) {
                           currentStatus={lead.status}
                           onTriggerCall={() => handleTriggerCall(lead)}
                           onRefresh={fetchLeads}
+                          canMakeCalls={hasApprovedPrompts}
+                          role={effectiveRole}
                         />
                       </TableCell>
                     </TableRow>
