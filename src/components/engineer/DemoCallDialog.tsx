@@ -61,9 +61,9 @@ export function DemoCallDialog({
 
       if (insertError) throw insertError;
 
-      // Make the actual call via Aitel
+      // Make the actual call via Aitel (demo call action for engineers)
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/aitel-proxy?action=make-call`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/aitel-proxy?action=make-demo-call`,
         {
           method: "POST",
           headers: {
