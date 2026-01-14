@@ -306,6 +306,54 @@ serve(async (req) => {
         }
         break;
 
+      case "make-demo-call":
+        // Demo calls for engineers - no credit check, phone number passed directly
+        if (userRole !== "admin" && userRole !== "engineer") {
+          return new Response(
+            JSON.stringify({ error: "Forbidden" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const demoAgentId = body.agent_id; // This is the external Bolna agent ID
+        const recipientPhone = body.recipient_phone_number;
+
+        if (!demoAgentId || !recipientPhone) {
+          return new Response(
+            JSON.stringify({ error: "agent_id and recipient_phone_number are required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Make outbound demo call via Bolna
+        response = await fetch(`${BOLNA_API_BASE}/call`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${BOLNA_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            agent_id: demoAgentId,
+            recipient_phone_number: recipientPhone,
+            from_phone_number: body.from_phone_number,
+            user_data: body.user_data,
+          }),
+        });
+
+        if (response.ok) {
+          const demoCallResult = await response.json();
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              execution_id: demoCallResult.execution_id,
+              status: demoCallResult.status,
+              message: demoCallResult.message 
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        break;
+
       case "get-call-status":
         const callId = url.searchParams.get("call_id");
         if (!callId) {
