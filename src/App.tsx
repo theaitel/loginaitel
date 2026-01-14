@@ -41,6 +41,7 @@ import AdminRealTimeMonitor from "./pages/admin/AdminRealTimeMonitor";
 import BatchCallHistory from "./pages/admin/BatchCallHistory";
 import AdminClients from "./pages/admin/AdminClients";
 import AdminEngineers from "./pages/admin/AdminEngineers";
+import AdminDemoLogs from "./pages/admin/AdminDemoLogs";
 
 const queryClient = new QueryClient();
 
@@ -146,6 +147,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <AdminEngineers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/demo-logs"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminDemoLogs />
                 </ProtectedRoute>
               }
             />
