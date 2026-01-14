@@ -26,6 +26,8 @@ interface LeadActionsProps {
   currentStatus: string;
   onTriggerCall: () => void;
   onRefresh: () => void;
+  canMakeCalls?: boolean;
+  role?: "admin" | "engineer" | "client";
 }
 
 const STATUS_OPTIONS: { value: LeadStatus; label: string; icon: React.ElementType }[] = [
@@ -37,9 +39,19 @@ const STATUS_OPTIONS: { value: LeadStatus; label: string; icon: React.ElementTyp
   { value: "completed", label: "Completed", icon: CheckCircle },
 ];
 
-export function LeadActions({ leadId, currentStatus, onTriggerCall, onRefresh }: LeadActionsProps) {
+export function LeadActions({ 
+  leadId, 
+  currentStatus, 
+  onTriggerCall, 
+  onRefresh,
+  canMakeCalls = true,
+  role = "client"
+}: LeadActionsProps) {
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Engineers can only make calls if they have approved prompts
+  const showCallOption = role !== "engineer" || canMakeCalls;
 
   const handleStatusChange = async (newStatus: LeadStatus) => {
     if (newStatus === currentStatus) return;
@@ -106,10 +118,19 @@ export function LeadActions({ leadId, currentStatus, onTriggerCall, onRefresh }:
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem onClick={onTriggerCall}>
-          <Phone className="h-4 w-4 mr-2" />
-          Trigger Call
-        </DropdownMenuItem>
+        {showCallOption && (
+          <DropdownMenuItem onClick={onTriggerCall}>
+            <Phone className="h-4 w-4 mr-2" />
+            Trigger Call
+          </DropdownMenuItem>
+        )}
+
+        {!showCallOption && role === "engineer" && (
+          <div className="px-2 py-1.5 text-xs text-muted-foreground">
+            <Phone className="h-3 w-3 inline mr-1" />
+            Prompt approval required for calls
+          </div>
+        )}
 
         <DropdownMenuSeparator />
 

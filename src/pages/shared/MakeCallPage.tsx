@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Loader2, User, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Phone, Loader2, User, Clock, CheckCircle, XCircle, AlertCircle, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -88,6 +88,14 @@ const statusConfig: Record<string, { label: string; icon: React.ReactNode; class
 
 const ACTIVE_STATUSES = ["initiated", "queued", "ringing", "in-progress"];
 
+// Statuses that allow call testing (prompt approved or later)
+const CALL_ALLOWED_STATUSES = [
+  'prompt_approved',
+  'demo_in_progress', 
+  'demo_submitted',
+  'completed'
+];
+
 export default function MakeCallPage({ role }: MakeCallPageProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -99,6 +107,7 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
   const [isCalling, setIsCalling] = useState(false);
   const [callMode, setCallMode] = useState<"lead" | "manual">("lead");
   const [activeCalls, setActiveCalls] = useState<ActiveCall[]>([]);
+  const [hasApprovedPrompts, setHasApprovedPrompts] = useState<boolean | null>(null);
 
   // Fetch agents
   const { data: agents = [], isLoading: loadingAgents } = useQuery({
@@ -144,6 +153,34 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
     },
     enabled: !!user,
   });
+
+  // Check if engineer has approved prompts for call testing
+  const { data: approvedPromptsCheck, isLoading: checkingApproval } = useQuery({
+    queryKey: ["engineer-approved-prompts", user?.id],
+    queryFn: async () => {
+      if (!user || role !== "engineer") return { hasApproved: true };
+      
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("id")
+        .eq("assigned_to", user.id)
+        .in("status", CALL_ALLOWED_STATUSES)
+        .limit(1);
+
+      if (error) throw error;
+      return { hasApproved: data && data.length > 0 };
+    },
+    enabled: !!user && role === "engineer",
+  });
+
+  // Update state when check completes
+  useEffect(() => {
+    if (role !== "engineer") {
+      setHasApprovedPrompts(true);
+    } else if (approvedPromptsCheck !== undefined) {
+      setHasApprovedPrompts(approvedPromptsCheck.hasApproved);
+    }
+  }, [role, approvedPromptsCheck]);
 
   // Fetch recent calls with agent info
   const { data: recentCalls = [], refetch: refetchCalls } = useQuery({
@@ -500,119 +537,144 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Agent Selection */}
-              <div className="space-y-2">
-                <Label>Select Agent *</Label>
-                {loadingAgents ? (
-                  <div className="h-10 bg-muted animate-pulse rounded" />
-                ) : agents.length > 0 ? (
-                  <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
-                    <SelectTrigger className="border-2">
-                      <SelectValue placeholder="Choose an agent" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {agents.map((agent) => (
-                        <SelectItem key={agent.id} value={agent.id}>
-                          {agent.agent_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <p className="text-sm text-muted-foreground p-3 bg-muted/50 border-2 border-border">
-                    {role === "engineer"
-                      ? "No eligible agents assigned to you. Ask an admin to assign you an agent and a client."
-                      : "No agents available. Please contact admin to assign agents."}
-                  </p>
-                )}
-              </div>
+              {/* Engineer Approval Restriction Message */}
+              {role === "engineer" && hasApprovedPrompts === false && (
+                <div className="flex items-start gap-3 p-4 bg-destructive/10 border-2 border-destructive text-destructive">
+                  <ShieldAlert className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold">Call Testing Not Available</p>
+                    <p className="text-sm mt-1">
+                      You need to have at least one task with an approved prompt before you can test calls. 
+                      Complete your prompt editing and submit for admin approval first.
+                    </p>
+                  </div>
+                </div>
+              )}
 
-              {/* Call Mode Tabs */}
-              <Tabs value={callMode} onValueChange={(v) => setCallMode(v as "lead" | "manual")}>
-                <TabsList className="w-full">
-                  <TabsTrigger value="lead" className="flex-1">Select Lead</TabsTrigger>
-                  <TabsTrigger value="manual" className="flex-1">Enter Number</TabsTrigger>
-                </TabsList>
+              {role === "engineer" && checkingApproval && (
+                <div className="flex items-center gap-2 p-4 bg-muted border-2 border-border">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">Checking approval status...</span>
+                </div>
+              )}
 
-                <TabsContent value="lead" className="space-y-4 mt-4">
+              {/* Agent Selection - Only show if engineer has approval or is admin/client */}
+              {(hasApprovedPrompts || role !== "engineer") && (
+                <>
                   <div className="space-y-2">
-                    <Label>Select Lead *</Label>
-                    {loadingLeads ? (
+                    <Label>Select Agent *</Label>
+                    {loadingAgents ? (
                       <div className="h-10 bg-muted animate-pulse rounded" />
-                    ) : leads.length > 0 ? (
-                      <Select value={selectedLeadId} onValueChange={setSelectedLeadId}>
+                    ) : agents.length > 0 ? (
+                      <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
                         <SelectTrigger className="border-2">
-                          <SelectValue placeholder="Choose a lead" />
+                          <SelectValue placeholder="Choose an agent" />
                         </SelectTrigger>
                         <SelectContent>
-                          {leads.map((lead) => (
-                            <SelectItem key={lead.id} value={lead.id}>
-                              <span className="flex items-center gap-2">
-                                <User className="h-4 w-4" />
-                                {lead.name || "Unknown"} - {formatPhoneDisplay(lead.phone_number)}
-                              </span>
+                          {agents.map((agent) => (
+                            <SelectItem key={agent.id} value={agent.id}>
+                              {agent.agent_name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     ) : (
                       <p className="text-sm text-muted-foreground p-3 bg-muted/50 border-2 border-border">
-                        No leads available. Add leads first.
+                        {role === "engineer"
+                          ? "No eligible agents assigned to you. Ask an admin to assign you an agent and a client."
+                          : "No agents available. Please contact admin to assign agents."}
                       </p>
                     )}
                   </div>
 
-                  {selectedLead && (
-                    <div className="p-3 bg-muted/50 border-2 border-border">
-                      <p className="font-medium">{selectedLead.name || "Unknown"}</p>
-                      <p className="font-mono text-sm text-muted-foreground">
-                        {formatPhoneDisplay(selectedLead.phone_number)}
-                      </p>
-                    </div>
-                  )}
-                </TabsContent>
+                  {/* Call Mode Tabs */}
+                  <Tabs value={callMode} onValueChange={(v) => setCallMode(v as "lead" | "manual")}>
+                    <TabsList className="w-full">
+                      <TabsTrigger value="lead" className="flex-1">Select Lead</TabsTrigger>
+                      <TabsTrigger value="manual" className="flex-1">Enter Number</TabsTrigger>
+                    </TabsList>
 
-                <TabsContent value="manual" className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label>Phone Number *</Label>
-                    <Input
-                      placeholder="+1234567890"
-                      value={manualPhone}
-                      onChange={(e) => setManualPhone(e.target.value)}
-                      className="border-2 font-mono"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Name (Optional)</Label>
-                    <Input
-                      placeholder="Contact name"
-                      value={manualName}
-                      onChange={(e) => setManualName(e.target.value)}
-                      className="border-2"
-                    />
-                  </div>
-                </TabsContent>
-              </Tabs>
+                    <TabsContent value="lead" className="space-y-4 mt-4">
+                      <div className="space-y-2">
+                        <Label>Select Lead *</Label>
+                        {loadingLeads ? (
+                          <div className="h-10 bg-muted animate-pulse rounded" />
+                        ) : leads.length > 0 ? (
+                          <Select value={selectedLeadId} onValueChange={setSelectedLeadId}>
+                            <SelectTrigger className="border-2">
+                              <SelectValue placeholder="Choose a lead" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {leads.map((lead) => (
+                                <SelectItem key={lead.id} value={lead.id}>
+                                  <span className="flex items-center gap-2">
+                                    <User className="h-4 w-4" />
+                                    {lead.name || "Unknown"} - {formatPhoneDisplay(lead.phone_number)}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <p className="text-sm text-muted-foreground p-3 bg-muted/50 border-2 border-border">
+                            No leads available. Add leads first.
+                          </p>
+                        )}
+                      </div>
 
-              {/* Make Call Button */}
-              <Button
-                onClick={handleMakeCall}
-                disabled={isCalling || !selectedAgentId || (callMode === "lead" && !selectedLeadId) || (callMode === "manual" && !manualPhone)}
-                className="w-full"
-                size="lg"
-              >
-                {isCalling ? (
-                  <>
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    Initiating Call...
-                  </>
-                ) : (
-                  <>
-                    <Phone className="h-5 w-5 mr-2" />
-                    Make Call
-                  </>
-                )}
-              </Button>
+                      {selectedLead && (
+                        <div className="p-3 bg-muted/50 border-2 border-border">
+                          <p className="font-medium">{selectedLead.name || "Unknown"}</p>
+                          <p className="font-mono text-sm text-muted-foreground">
+                            {formatPhoneDisplay(selectedLead.phone_number)}
+                          </p>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="manual" className="space-y-4 mt-4">
+                      <div className="space-y-2">
+                        <Label>Phone Number *</Label>
+                        <Input
+                          placeholder="+1234567890"
+                          value={manualPhone}
+                          onChange={(e) => setManualPhone(e.target.value)}
+                          className="border-2 font-mono"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Name (Optional)</Label>
+                        <Input
+                          placeholder="Contact name"
+                          value={manualName}
+                          onChange={(e) => setManualName(e.target.value)}
+                          className="border-2"
+                        />
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+
+                  {/* Make Call Button */}
+                  <Button
+                    onClick={handleMakeCall}
+                    disabled={isCalling || !selectedAgentId || (callMode === "lead" && !selectedLeadId) || (callMode === "manual" && !manualPhone)}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {isCalling ? (
+                      <>
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        Initiating Call...
+                      </>
+                    ) : (
+                      <>
+                        <Phone className="h-5 w-5 mr-2" />
+                        Make Call
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
 
