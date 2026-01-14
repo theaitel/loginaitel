@@ -136,20 +136,35 @@ export default function EngineerTasks() {
   const [submissionNotes, setSubmissionNotes] = useState("");
   const [selectedDemoCallId, setSelectedDemoCallId] = useState<string | null>(null);
 
-  // Fetch available tasks (pending, not assigned)
+  // Fetch available tasks (pending - unassigned OR assigned to current user)
   const { data: availableTasks = [], isLoading: loadingAvailable } = useQuery({
-    queryKey: ["available-tasks"],
+    queryKey: ["available-tasks", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      if (!user?.id) return [];
+      
+      // Get unassigned pending tasks
+      const { data: unassigned, error: err1 } = await supabase
         .from("tasks")
         .select("*")
         .eq("status", "pending")
         .is("assigned_to", null)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      return data as Task[];
+      if (err1) throw err1;
+
+      // Get pending tasks assigned specifically to this engineer
+      const { data: assigned, error: err2 } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("status", "pending")
+        .eq("assigned_to", user.id)
+        .order("created_at", { ascending: false });
+
+      if (err2) throw err2;
+
+      return [...(assigned || []), ...(unassigned || [])] as Task[];
     },
+    enabled: !!user?.id,
   });
 
   // Fetch my tasks (assigned to current user)
