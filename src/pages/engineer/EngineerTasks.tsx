@@ -53,7 +53,7 @@ interface Task {
   rejection_reason: string | null;
   completed_at: string | null;
   picked_at: string | null;
-  bolna_agent_id: string | null;
+  aitel_agent_id: string | null;
   prompt_started_at: string | null;
   prompt_submitted_at: string | null;
   prompt_approved_at: string | null;
@@ -335,7 +335,7 @@ export default function EngineerTasks() {
   };
 
   const handleEditPrompt = (task: Task) => {
-    navigate(`/engineer/agent-editor?taskId=${task.id}&agentId=${task.bolna_agent_id}`);
+    navigate(`/engineer/agent-editor?taskId=${task.id}&agentId=${task.aitel_agent_id}`);
   };
 
   const handleSubmitPrompt = (task: Task) => {
@@ -1034,13 +1034,13 @@ export default function EngineerTasks() {
       </Dialog>
 
       {/* Demo Call Dialog */}
-      {selectedTask && selectedTask.bolna_agent_id && (
+      {selectedTask && selectedTask.aitel_agent_id && (
         <DemoCallDialog
           open={showDemoCallDialog}
           onOpenChange={setShowDemoCallDialog}
           taskId={selectedTask.id}
-          agentId={selectedTask.bolna_agent_id}
-          externalAgentId={selectedTask.bolna_agent_id}
+          agentId={selectedTask.aitel_agent_id}
+          externalAgentId={selectedTask.aitel_agent_id}
           agentName={selectedTask.title}
         />
       )}

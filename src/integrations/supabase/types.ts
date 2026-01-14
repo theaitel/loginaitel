@@ -459,8 +459,8 @@ export type Database = {
       }
       tasks: {
         Row: {
+          aitel_agent_id: string | null
           assigned_to: string | null
-          bolna_agent_id: string | null
           completed_at: string | null
           created_at: string
           created_by: string
@@ -485,8 +485,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          aitel_agent_id?: string | null
           assigned_to?: string | null
-          bolna_agent_id?: string | null
           completed_at?: string | null
           created_at?: string
           created_by: string
@@ -511,8 +511,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          aitel_agent_id?: string | null
           assigned_to?: string | null
-          bolna_agent_id?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string
@@ -539,7 +539,7 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "tasks_bolna_agent_id_fkey"
-            columns: ["bolna_agent_id"]
+            columns: ["aitel_agent_id"]
             isOneToOne: false
             referencedRelation: "aitel_agents"
             referencedColumns: ["id"]
