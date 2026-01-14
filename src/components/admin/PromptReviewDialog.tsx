@@ -24,8 +24,8 @@ interface PromptReviewDialogProps {
     description: string | null;
     points: number;
     assigned_to: string | null;
-    bolna_agent_id: string | null;
-    bolna_agents?: {
+    aitel_agent_id: string | null;
+    aitel_agents?: {
       agent_name: string;
       current_system_prompt: string | null;
       original_system_prompt: string | null;
@@ -144,10 +144,10 @@ export function PromptReviewDialog({
                   <User className="h-4 w-4 text-muted-foreground" />
                   <span>{engineerName}</span>
                 </div>
-                {task.bolna_agents && (
+                {task.aitel_agents && (
                   <div className="flex items-center gap-1">
                     <Bot className="h-4 w-4 text-muted-foreground" />
-                    <span>{task.bolna_agents.agent_name}</span>
+                    <span>{task.aitel_agents.agent_name}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-1">
@@ -158,26 +158,26 @@ export function PromptReviewDialog({
             </div>
 
             {/* Current Prompt */}
-            {task.bolna_agents?.current_system_prompt && (
+            {task.aitel_agents?.current_system_prompt && (
               <div className="border-2 border-chart-2 bg-chart-2/5 p-4 space-y-2">
                 <h4 className="font-medium flex items-center gap-2">
                   <FileText className="h-4 w-4" />
                   Current System Prompt
                 </h4>
                 <pre className="text-sm whitespace-pre-wrap bg-background/50 p-3 max-h-60 overflow-auto border">
-                  {task.bolna_agents.current_system_prompt}
+                  {task.aitel_agents.current_system_prompt}
                 </pre>
               </div>
             )}
 
             {/* Original Prompt for comparison */}
-            {task.bolna_agents?.original_system_prompt && (
+            {task.aitel_agents?.original_system_prompt && (
               <div className="border-2 border-dashed border-border p-4 space-y-2">
                 <h4 className="font-medium text-muted-foreground">
                   Original Prompt (Reference)
                 </h4>
                 <pre className="text-xs text-muted-foreground whitespace-pre-wrap max-h-32 overflow-auto">
-                  {task.bolna_agents.original_system_prompt}
+                  {task.aitel_agents.original_system_prompt}
                 </pre>
               </div>
             )}

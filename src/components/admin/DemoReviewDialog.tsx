@@ -41,7 +41,7 @@ interface DemoReviewDialogProps {
     prompt_approved_at: string | null;
     demo_started_at: string | null;
     demo_edit_count: number | null;
-    bolna_agents?: {
+    aitel_agents?: {
       agent_name: string;
     } | null;
   } | null;
@@ -213,10 +213,10 @@ export function DemoReviewDialog({
                 <User className="h-4 w-4 text-muted-foreground" />
                 <span>{engineerName}</span>
               </div>
-              {task.bolna_agents && (
+              {task.aitel_agents && (
                 <div className="flex items-center gap-1">
                   <Bot className="h-4 w-4 text-muted-foreground" />
-                  <span>{task.bolna_agents.agent_name}</span>
+                  <span>{task.aitel_agents.agent_name}</span>
                 </div>
               )}
             </div>

@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Phone, Bot, RefreshCw, Link, Unlink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { listPhoneNumbers, assignPhoneNumberToAgent, type PhoneNumber } from "@/lib/bolna";
+import { listPhoneNumbers, assignPhoneNumberToAgent, type PhoneNumber } from "@/lib/aitel";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Agent {

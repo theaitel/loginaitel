@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { updateBolnaAgent } from "@/lib/bolna";
+import { updateBolnaAgent } from "@/lib/aitel";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
@@ -467,7 +467,7 @@ export default function AgentEditor() {
             onOpenChange={setDemoDialogOpen}
             taskId={task.id}
             agentId={agent.id}
-            bolnaAgentId={agent.external_agent_id}
+            externalAgentId={agent.external_agent_id}
             agentName={agent.agent_name}
           />
         )}

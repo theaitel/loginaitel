@@ -60,7 +60,7 @@ interface Call {
     phone_number: string;
     email: string | null;
   };
-  bolna_agents?: {
+  aitel_agents?: {
     agent_name: string;
   };
   profiles?: {
@@ -163,7 +163,7 @@ export default function BatchCallHistory() {
       call.leads?.name?.toLowerCase().includes(searchLower) ||
       call.leads?.phone_number?.includes(searchLower) ||
       call.batch_id?.toLowerCase().includes(searchLower) ||
-      call.bolna_agents?.agent_name?.toLowerCase().includes(searchLower)
+      call.aitel_agents?.agent_name?.toLowerCase().includes(searchLower)
     );
   });
 
@@ -328,7 +328,7 @@ export default function BatchCallHistory() {
                         {getClientName(call.client_id)}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {call.bolna_agents?.agent_name || "—"}
+                        {call.aitel_agents?.agent_name || "—"}
                       </TableCell>
                       <TableCell className="font-mono text-sm text-muted-foreground">
                         {call.batch_id ? `${call.batch_id.slice(0, 8)}...` : "—"}

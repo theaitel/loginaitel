@@ -21,7 +21,7 @@ interface DemoCallDialogProps {
   onOpenChange: (open: boolean) => void;
   taskId: string;
   agentId: string;
-  bolnaAgentId: string;
+  externalAgentId: string;
   agentName: string;
 }
 
@@ -30,7 +30,7 @@ export function DemoCallDialog({
   onOpenChange,
   taskId,
   agentId,
-  bolnaAgentId,
+  externalAgentId,
   agentName,
 }: DemoCallDialogProps) {
   const { user } = useAuth();
@@ -71,7 +71,7 @@ export function DemoCallDialog({
             Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
           },
           body: JSON.stringify({
-            agent_id: bolnaAgentId,
+            agent_id: externalAgentId,
             recipient_phone_number: phoneNumber,
           }),
         }

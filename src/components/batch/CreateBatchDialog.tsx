@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Upload, FileText, X, Download } from "lucide-react";
 import { toast } from "sonner";
-import { createBatch, listPhoneNumbers, type PhoneNumber } from "@/lib/bolna";
+import { createBatch, listPhoneNumbers, type PhoneNumber } from "@/lib/aitel";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -38,7 +38,7 @@ export function CreateBatchDialog({ open, onOpenChange, onSuccess }: CreateBatch
 
   // Fetch agents
   const { data: agents } = useQuery({
-    queryKey: ["bolna-agents-for-batch"],
+    queryKey: ["aitel-agents-for-batch"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("aitel_agents" as any)

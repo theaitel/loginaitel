@@ -45,7 +45,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { listBatches, listAgentExecutions, type Batch, type CallExecution } from "@/lib/bolna";
+import { listBatches, listAgentExecutions, type Batch, type CallExecution } from "@/lib/aitel";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -248,7 +248,7 @@ export default function BatchAnalytics() {
 
   // Fetch agents
   const { data: agents } = useQuery({
-    queryKey: ["bolna-agents-analytics"],
+    queryKey: ["aitel-agents-analytics"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("aitel_agents" as any)

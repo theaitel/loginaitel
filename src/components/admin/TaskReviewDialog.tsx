@@ -23,7 +23,7 @@ interface TaskReviewDialogProps {
     description: string | null;
     points: number;
     assigned_to: string | null;
-    bolna_agents?: {
+    aitel_agents?: {
       agent_name: string;
     } | null;
   } | null;
@@ -118,10 +118,10 @@ export function TaskReviewDialog({
                 <User className="h-4 w-4 text-muted-foreground" />
                 <span>{engineerName}</span>
               </div>
-              {task.bolna_agents && (
+              {task.aitel_agents && (
                 <div className="flex items-center gap-1">
                   <Bot className="h-4 w-4 text-muted-foreground" />
-                  <span>{task.bolna_agents.agent_name}</span>
+                  <span>{task.aitel_agents.agent_name}</span>
                 </div>
               )}
               <div className="flex items-center gap-1">

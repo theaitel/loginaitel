@@ -38,7 +38,7 @@ import {
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { createBatch, listPhoneNumbers, type PhoneNumber } from "@/lib/bolna";
+import { createBatch, listPhoneNumbers, type PhoneNumber } from "@/lib/aitel";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useRef } from "react";

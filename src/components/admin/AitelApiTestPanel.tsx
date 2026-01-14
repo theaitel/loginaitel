@@ -34,7 +34,7 @@ interface TestResult {
   error?: string;
 }
 
-export function BolnaApiTestPanel() {
+export function AitelApiTestPanel() {
   const [results, setResults] = useState<TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [agentId, setAgentId] = useState("");

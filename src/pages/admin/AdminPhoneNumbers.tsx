@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Phone, RefreshCw, Bot, DollarSign, Users, Link } from "lucide-react";
-import { listPhoneNumbers, PhoneNumber } from "@/lib/bolna";
+import { listPhoneNumbers, PhoneNumber } from "@/lib/aitel";
 import { supabase } from "@/integrations/supabase/client";
 import { PhoneNumberAssignment } from "@/components/phone/PhoneNumberAssignment";
 
@@ -48,7 +48,7 @@ export default function AdminPhoneNumbers() {
 
   // Fetch agents for mapping
   const { data: agents } = useQuery({
-    queryKey: ["bolna-agents"],
+    queryKey: ["aitel-agents"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("aitel_agents" as any)

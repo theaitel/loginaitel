@@ -31,7 +31,7 @@ import {
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { listBatches, deleteBatch, type Batch } from "@/lib/bolna";
+import { listBatches, deleteBatch, type Batch } from "@/lib/aitel";
 import { format } from "date-fns";
 import { CreateBatchDialog } from "@/components/batch/CreateBatchDialog";
 import { BatchDetailsDialog } from "@/components/batch/BatchDetailsDialog";
@@ -62,7 +62,7 @@ export default function ClientBatches() {
 
   // Fetch agents
   const { data: agents } = useQuery({
-    queryKey: ["bolna-agents-for-batch-list"],
+    queryKey: ["aitel-agents-for-batch-list"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("aitel_agents" as any)

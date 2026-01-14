@@ -1040,7 +1040,7 @@ export default function EngineerTasks() {
           onOpenChange={setShowDemoCallDialog}
           taskId={selectedTask.id}
           agentId={selectedTask.bolna_agent_id}
-          bolnaAgentId={selectedTask.bolna_agent_id}
+          externalAgentId={selectedTask.bolna_agent_id}
           agentName={selectedTask.title}
         />
       )}

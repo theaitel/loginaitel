@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Phone, Search, RefreshCw, Globe, Clock, Bot, DollarSign } from "lucide-react";
-import { listPhoneNumbers, searchPhoneNumbers, PhoneNumber, AvailablePhoneNumber } from "@/lib/bolna";
+import { listPhoneNumbers, searchPhoneNumbers, PhoneNumber, AvailablePhoneNumber } from "@/lib/aitel";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
