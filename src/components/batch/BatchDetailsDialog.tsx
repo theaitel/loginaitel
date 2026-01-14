@@ -36,7 +36,7 @@ import {
   listBatchExecutions, 
   scheduleBatch, 
   stopBatch 
-} from "@/lib/bolna";
+} from "@/lib/aitel";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";

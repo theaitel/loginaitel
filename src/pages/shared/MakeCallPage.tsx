@@ -23,7 +23,7 @@ import { Phone, Loader2, User, Clock, CheckCircle, XCircle, AlertCircle } from "
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { makeCall, syncCallStatus } from "@/lib/bolna";
+import { makeCall, syncCallStatus } from "@/lib/aitel";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CallProgressTracker } from "@/components/calls/CallProgressTracker";
 

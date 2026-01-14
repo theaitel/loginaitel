@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { CalendarIcon, Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { scheduleBatch, type Batch } from "@/lib/bolna";
+import { scheduleBatch, type Batch } from "@/lib/aitel";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 

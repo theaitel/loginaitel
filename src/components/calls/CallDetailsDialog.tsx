@@ -48,7 +48,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { Slider } from "@/components/ui/slider";
-import { getExecution, getExecutionLogs, CallExecution, ExecutionLogEntry } from "@/lib/bolna";
+import { getExecution, getExecutionLogs, CallExecution, ExecutionLogEntry } from "@/lib/aitel";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";

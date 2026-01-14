@@ -14,7 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { stopCall } from "@/lib/bolna";
+import { stopCall } from "@/lib/aitel";
 import { useToast } from "@/hooks/use-toast";
 
 interface ActiveCall {

@@ -96,7 +96,7 @@ export default function AdminTasks() {
         .from("tasks")
         .select(`
           *,
-          bolna_agents (
+          aitel_agents (
             id,
             agent_name,
             current_system_prompt,
@@ -225,10 +225,10 @@ export default function AdminTasks() {
           </div>
         </TableCell>
         <TableCell>
-          {task.bolna_agents ? (
+          {(task as any).aitel_agents ? (
             <span className="inline-flex items-center gap-1 text-sm">
               <Bot className="h-3 w-3" />
-              {task.bolna_agents.agent_name}
+              {(task as any).aitel_agents.agent_name}
             </span>
           ) : (
             <span className="text-muted-foreground">No agent</span>

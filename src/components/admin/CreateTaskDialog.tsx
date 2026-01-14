@@ -47,7 +47,7 @@ export function CreateTaskDialog({ open, onOpenChange, task }: CreateTaskDialogP
 
   // Fetch agents for selection
   const { data: agents } = useQuery({
-    queryKey: ["bolna-agents-for-tasks"],
+    queryKey: ["aitel-agents-for-tasks"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("aitel_agents" as any)

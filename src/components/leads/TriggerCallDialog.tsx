@@ -18,7 +18,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Phone, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { makeCall } from "@/lib/bolna";
+import { makeCall } from "@/lib/aitel";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Agent {
