@@ -86,6 +86,8 @@ export function CreateTaskDialog({ open, onOpenChange, task }: CreateTaskDialogP
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // When admin assigns an engineer, task stays "pending" so engineer can pick it
+      // The assignment just restricts visibility to that engineer
       const taskData = {
         title,
         description: description || null,
@@ -94,8 +96,8 @@ export function CreateTaskDialog({ open, onOpenChange, task }: CreateTaskDialogP
         aitel_agent_id: selectedAgentId || null,
         assigned_to: selectedEngineerId || null,
         created_by: user.id,
-        status: selectedEngineerId ? "in_progress" : "pending",
-        picked_at: selectedEngineerId ? new Date().toISOString() : null,
+        status: "pending",
+        picked_at: null,
       };
 
       if (isEditing) {
