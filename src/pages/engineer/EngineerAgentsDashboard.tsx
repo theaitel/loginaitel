@@ -45,7 +45,7 @@ interface Task {
   points: number;
   status: string;
   deadline: string | null;
-  bolna_agent_id: string | null;
+  aitel_agent_id: string | null;
   created_at: string;
   picked_at: string | null;
 }
@@ -128,7 +128,7 @@ export default function EngineerAgentsDashboard() {
 
   // Group tasks by agent
   const tasksByAgent = myTasks.reduce((acc, task) => {
-    const agentId = task.bolna_agent_id || "unassigned";
+    const agentId = task.aitel_agent_id || "unassigned";
     if (!acc[agentId]) acc[agentId] = [];
     acc[agentId].push(task);
     return acc;
@@ -356,7 +356,7 @@ export default function EngineerAgentsDashboard() {
             ) : (
               <div className="space-y-3">
                 {myTasks.map((task) => {
-                  const agent = getAgentForTask(task.bolna_agent_id);
+                  const agent = getAgentForTask(task.aitel_agent_id);
                   const isOverdue = task.deadline && new Date(task.deadline) < new Date();
 
                   return (

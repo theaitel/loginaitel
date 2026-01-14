@@ -30,7 +30,7 @@ interface Task {
   description: string | null;
   points: number;
   status: string;
-  bolna_agent_id: string | null;
+  aitel_agent_id: string | null;
   prompt_started_at: string | null;
   prompt_approved_at: string | null;
   demo_edit_count: number | null;
@@ -78,19 +78,19 @@ export default function AgentEditor() {
 
   // Fetch agent details
   const { data: agent, isLoading: loadingAgent } = useQuery({
-    queryKey: ["aitel-agent", task?.bolna_agent_id],
+    queryKey: ["aitel-agent", task?.aitel_agent_id],
     queryFn: async () => {
-      if (!task?.bolna_agent_id) return null;
+      if (!task?.aitel_agent_id) return null;
       const { data, error } = await supabase
         .from("aitel_agents")
         .select("*")
-        .eq("id", task.bolna_agent_id)
+        .eq("id", task.aitel_agent_id)
         .maybeSingle();
 
       if (error) throw error;
       return data as AitelAgentRecord | null;
     },
-    enabled: !!task?.bolna_agent_id,
+    enabled: !!task?.aitel_agent_id,
   });
 
   // Initialize prompt from agent
@@ -167,7 +167,7 @@ export default function AgentEditor() {
 
       if (dbError) throw dbError;
 
-      queryClient.invalidateQueries({ queryKey: ["aitel-agent", task.bolna_agent_id] });
+      queryClient.invalidateQueries({ queryKey: ["aitel-agent", task.aitel_agent_id] });
       queryClient.invalidateQueries({ queryKey: ["task-with-agent", taskId] });
 
       toast({

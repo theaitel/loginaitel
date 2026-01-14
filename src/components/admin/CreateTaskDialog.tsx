@@ -29,7 +29,7 @@ interface CreateTaskDialogProps {
     description: string | null;
     points: number;
     deadline: string | null;
-    bolna_agent_id: string | null;
+    aitel_agent_id: string | null;
     assigned_to: string | null;
   } | null;
 }
@@ -42,7 +42,7 @@ export function CreateTaskDialog({ open, onOpenChange, task }: CreateTaskDialogP
   const [description, setDescription] = useState(task?.description || "");
   const [points, setPoints] = useState(task?.points?.toString() || "100");
   const [deadline, setDeadline] = useState(task?.deadline?.split("T")[0] || "");
-  const [selectedAgentId, setSelectedAgentId] = useState(task?.bolna_agent_id || "");
+  const [selectedAgentId, setSelectedAgentId] = useState(task?.aitel_agent_id || "");
   const [selectedEngineerId, setSelectedEngineerId] = useState(task?.assigned_to || "");
 
   // Fetch agents for selection
@@ -91,7 +91,7 @@ export function CreateTaskDialog({ open, onOpenChange, task }: CreateTaskDialogP
         description: description || null,
         points: parseInt(points) || 100,
         deadline: deadline ? new Date(deadline).toISOString() : null,
-        bolna_agent_id: selectedAgentId || null,
+        aitel_agent_id: selectedAgentId || null,
         assigned_to: selectedEngineerId || null,
         created_by: user.id,
         status: selectedEngineerId ? "in_progress" : "pending",
@@ -138,7 +138,7 @@ export function CreateTaskDialog({ open, onOpenChange, task }: CreateTaskDialogP
       setDescription(task.description || "");
       setPoints(task.points?.toString() || "100");
       setDeadline(task.deadline?.split("T")[0] || "");
-      setSelectedAgentId(task.bolna_agent_id || "");
+      setSelectedAgentId(task.aitel_agent_id || "");
       setSelectedEngineerId(task.assigned_to || "");
     } else {
       resetForm();
