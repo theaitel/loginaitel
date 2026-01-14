@@ -2,16 +2,16 @@ import { supabase } from "@/integrations/supabase/client";
 
 const AITEL_PROXY_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/aitel-proxy`;
 
-interface BolnaResponse<T> {
+interface AitelResponse<T> {
   data: T | null;
   error: string | null;
 }
 
-async function callBolnaProxy<T>(
+async function callAitelProxy<T>(
   action: string,
   params?: Record<string, string>,
   body?: unknown
-): Promise<BolnaResponse<T>> {
+): Promise<AitelResponse<T>> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -48,7 +48,7 @@ async function callBolnaProxy<T>(
 }
 
 // ==========================================
-// BOLNA V2 API TYPES
+// AITEL V2 API TYPES
 // ==========================================
 
 // LLM Configuration
@@ -258,8 +258,8 @@ export interface CreateAgentResponse {
   status: "created";
 }
 
-// Full Bolna Agent (GET /v2/agent/{id} response)
-export interface BolnaAgent {
+// Full Aitel Agent (GET /v2/agent/{id} response)
+export interface AitelAgent {
   id: string;
   agent_name: string;
   agent_type: string;
@@ -280,32 +280,32 @@ export interface BolnaAgent {
 // AGENT MANAGEMENT
 // ==========================================
 
-export async function listBolnaAgents(): Promise<BolnaResponse<BolnaAgent[]>> {
-  return callBolnaProxy<BolnaAgent[]>("list-agents");
+export async function listAitelAgents(): Promise<AitelResponse<AitelAgent[]>> {
+  return callAitelProxy<AitelAgent[]>("list-agents");
 }
 
-export async function getBolnaAgent(agentId: string): Promise<BolnaResponse<BolnaAgent>> {
-  return callBolnaProxy<BolnaAgent>("get-agent", { agent_id: agentId });
+export async function getAitelAgent(agentId: string): Promise<AitelResponse<AitelAgent>> {
+  return callAitelProxy<AitelAgent>("get-agent", { agent_id: agentId });
 }
 
-export async function createBolnaAgent(config: CreateAgentRequest): Promise<BolnaResponse<CreateAgentResponse>> {
-  return callBolnaProxy<CreateAgentResponse>("create-agent", undefined, config);
+export async function createAitelAgent(config: CreateAgentRequest): Promise<AitelResponse<CreateAgentResponse>> {
+  return callAitelProxy<CreateAgentResponse>("create-agent", undefined, config);
 }
 
-export async function updateBolnaAgent(
+export async function updateAitelAgent(
   agentId: string,
   config: Partial<CreateAgentRequest>
-): Promise<BolnaResponse<BolnaAgent>> {
-  return callBolnaProxy<BolnaAgent>("update-agent", { agent_id: agentId }, config);
+): Promise<AitelResponse<AitelAgent>> {
+  return callAitelProxy<AitelAgent>("update-agent", { agent_id: agentId }, config);
 }
 
-// Update only the system prompt for an agent (fetches current config first since Bolna API requires agent_config)
-export async function updateBolnaAgentPrompt(
+// Update only the system prompt for an agent (fetches current config first since Aitel API requires agent_config)
+export async function updateAitelAgentPrompt(
   agentId: string,
   systemPrompt: string
-): Promise<BolnaResponse<BolnaAgent>> {
-  // First fetch the current agent to get its agent_config (required by Bolna API)
-  const agentResult = await getBolnaAgent(agentId);
+): Promise<AitelResponse<AitelAgent>> {
+  // First fetch the current agent to get its agent_config (required by Aitel API)
+  const agentResult = await getAitelAgent(agentId);
   
   if (agentResult.error || !agentResult.data) {
     return { data: null, error: agentResult.error || "Failed to fetch agent" };
@@ -322,7 +322,7 @@ export async function updateBolnaAgentPrompt(
     tasks: currentAgent.tasks || [],
   };
 
-  return callBolnaProxy<BolnaAgent>("update-agent", { agent_id: agentId }, {
+  return callAitelProxy<AitelAgent>("update-agent", { agent_id: agentId }, {
     agent_config: agentConfig,
     agent_prompts: {
       task_1: {
@@ -332,16 +332,16 @@ export async function updateBolnaAgentPrompt(
   });
 }
 
-export async function deleteBolnaAgent(agentId: string): Promise<BolnaResponse<{ message: string; state: string }>> {
-  return callBolnaProxy<{ message: string; state: string }>("delete-agent", { agent_id: agentId });
+export async function deleteAitelAgent(agentId: string): Promise<AitelResponse<{ message: string; state: string }>> {
+  return callAitelProxy<{ message: string; state: string }>("delete-agent", { agent_id: agentId });
 }
 
 export interface StopAgentResponse {
   stopped_executions: string[];
 }
 
-export async function stopBolnaAgent(agentId: string): Promise<BolnaResponse<StopAgentResponse>> {
-  return callBolnaProxy<StopAgentResponse>("stop-agent", { agent_id: agentId });
+export async function stopAitelAgent(agentId: string): Promise<AitelResponse<StopAgentResponse>> {
+  return callAitelProxy<StopAgentResponse>("stop-agent", { agent_id: agentId });
 }
 
 // ==========================================
@@ -363,12 +363,12 @@ export interface MakeCallResponse {
   message: string;
 }
 
-export async function makeCall(options: MakeCallRequest): Promise<BolnaResponse<MakeCallResponse>> {
-  return callBolnaProxy<MakeCallResponse>("make-call", undefined, options);
+export async function makeCall(options: MakeCallRequest): Promise<AitelResponse<MakeCallResponse>> {
+  return callAitelProxy<MakeCallResponse>("make-call", undefined, options);
 }
 
-export async function getCallStatus(callId: string): Promise<BolnaResponse<Record<string, unknown>>> {
-  return callBolnaProxy<Record<string, unknown>>("get-call-status", { call_id: callId });
+export async function getCallStatus(callId: string): Promise<AitelResponse<Record<string, unknown>>> {
+  return callAitelProxy<Record<string, unknown>>("get-call-status", { call_id: callId });
 }
 
 export interface StopCallResponse {
@@ -377,8 +377,8 @@ export interface StopCallResponse {
   execution_id: string;
 }
 
-export async function stopCall(executionId: string): Promise<BolnaResponse<StopCallResponse>> {
-  return callBolnaProxy<StopCallResponse>("stop-call", { execution_id: executionId });
+export async function stopCall(executionId: string): Promise<AitelResponse<StopCallResponse>> {
+  return callAitelProxy<StopCallResponse>("stop-call", { execution_id: executionId });
 }
 
 // ==========================================
@@ -458,8 +458,8 @@ export interface ListExecutionsParams {
   to?: string;
 }
 
-export async function getExecution(executionId: string): Promise<BolnaResponse<CallExecution>> {
-  return callBolnaProxy<CallExecution>("get-execution", { execution_id: executionId });
+export async function getExecution(executionId: string): Promise<AitelResponse<CallExecution>> {
+  return callAitelProxy<CallExecution>("get-execution", { execution_id: executionId });
 }
 
 export interface SyncCallStatusResponse {
@@ -467,21 +467,21 @@ export interface SyncCallStatusResponse {
   status: string;
   duration_seconds: number;
   connected: boolean;
-  bolna_status: string;
+  aitel_status: string;
 }
 
-export async function syncCallStatus(executionId: string, callId: string): Promise<BolnaResponse<SyncCallStatusResponse>> {
-  return callBolnaProxy<SyncCallStatusResponse>("sync-call-status", { 
+export async function syncCallStatus(executionId: string, callId: string): Promise<AitelResponse<SyncCallStatusResponse>> {
+  return callAitelProxy<SyncCallStatusResponse>("sync-call-status", { 
     execution_id: executionId, 
     call_id: callId 
   });
 }
 
-export async function getExecutionLogs(executionId: string): Promise<BolnaResponse<ExecutionLogsResponse>> {
-  return callBolnaProxy<ExecutionLogsResponse>("get-execution-logs", { execution_id: executionId });
+export async function getExecutionLogs(executionId: string): Promise<AitelResponse<ExecutionLogsResponse>> {
+  return callAitelProxy<ExecutionLogsResponse>("get-execution-logs", { execution_id: executionId });
 }
 
-export async function listAgentExecutions(params: ListExecutionsParams): Promise<BolnaResponse<ListExecutionsResponse>> {
+export async function listAgentExecutions(params: ListExecutionsParams): Promise<AitelResponse<ListExecutionsResponse>> {
   const queryParams: Record<string, string> = { agent_id: params.agent_id };
   
   if (params.page_number !== undefined) queryParams.page_number = String(params.page_number);
@@ -494,7 +494,7 @@ export async function listAgentExecutions(params: ListExecutionsParams): Promise
   if (params.from) queryParams.from = params.from;
   if (params.to) queryParams.to = params.to;
   
-  return callBolnaProxy<ListExecutionsResponse>("list-agent-executions", queryParams);
+  return callAitelProxy<ListExecutionsResponse>("list-agent-executions", queryParams);
 }
 
 // ==========================================
@@ -535,39 +535,39 @@ export interface BatchActionResponse {
   state: string;
 }
 
-export async function createBatch(options: CreateBatchRequest): Promise<BolnaResponse<CreateBatchResponse>> {
-  return callBolnaProxy<CreateBatchResponse>("create-batch", undefined, options);
+export async function createBatch(options: CreateBatchRequest): Promise<AitelResponse<CreateBatchResponse>> {
+  return callAitelProxy<CreateBatchResponse>("create-batch", undefined, options);
 }
 
-export async function getBatch(batchId: string): Promise<BolnaResponse<Batch>> {
-  return callBolnaProxy<Batch>("get-batch", { batch_id: batchId });
+export async function getBatch(batchId: string): Promise<AitelResponse<Batch>> {
+  return callAitelProxy<Batch>("get-batch", { batch_id: batchId });
 }
 
-export async function listBatches(agentId: string): Promise<BolnaResponse<Batch[]>> {
-  return callBolnaProxy<Batch[]>("list-batches", { agent_id: agentId });
+export async function listBatches(agentId: string): Promise<AitelResponse<Batch[]>> {
+  return callAitelProxy<Batch[]>("list-batches", { agent_id: agentId });
 }
 
-export async function scheduleBatch(batchId: string, scheduledAt: string): Promise<BolnaResponse<BatchActionResponse>> {
-  return callBolnaProxy<BatchActionResponse>("schedule-batch", { batch_id: batchId }, { scheduled_at: scheduledAt });
+export async function scheduleBatch(batchId: string, scheduledAt: string): Promise<AitelResponse<BatchActionResponse>> {
+  return callAitelProxy<BatchActionResponse>("schedule-batch", { batch_id: batchId }, { scheduled_at: scheduledAt });
 }
 
-export async function stopBatch(batchId: string): Promise<BolnaResponse<BatchActionResponse>> {
-  return callBolnaProxy<BatchActionResponse>("stop-batch", { batch_id: batchId });
+export async function stopBatch(batchId: string): Promise<AitelResponse<BatchActionResponse>> {
+  return callAitelProxy<BatchActionResponse>("stop-batch", { batch_id: batchId });
 }
 
-export async function listBatchExecutions(batchId: string): Promise<BolnaResponse<CallExecution[]>> {
-  return callBolnaProxy<CallExecution[]>("list-batch-executions", { batch_id: batchId });
+export async function listBatchExecutions(batchId: string): Promise<AitelResponse<CallExecution[]>> {
+  return callAitelProxy<CallExecution[]>("list-batch-executions", { batch_id: batchId });
 }
 
-export async function deleteBatch(batchId: string): Promise<BolnaResponse<BatchActionResponse>> {
-  return callBolnaProxy<BatchActionResponse>("delete-batch", { batch_id: batchId });
+export async function deleteBatch(batchId: string): Promise<AitelResponse<BatchActionResponse>> {
+  return callAitelProxy<BatchActionResponse>("delete-batch", { batch_id: batchId });
 }
 
 // ==========================================
 // VOICES
 // ==========================================
 
-export interface BolnaVoice {
+export interface AitelVoice {
   id: string;
   name: string;
   provider: string;
@@ -575,8 +575,8 @@ export interface BolnaVoice {
   gender?: string;
 }
 
-export async function listVoices(): Promise<BolnaResponse<BolnaVoice[]>> {
-  return callBolnaProxy<BolnaVoice[]>("list-voices");
+export async function listVoices(): Promise<AitelResponse<AitelVoice[]>> {
+  return callAitelProxy<AitelVoice[]>("list-voices");
 }
 
 // ==========================================
@@ -611,14 +611,14 @@ export interface SearchPhoneNumbersParams {
   pattern?: string;
 }
 
-export async function searchPhoneNumbers(params: SearchPhoneNumbersParams): Promise<BolnaResponse<AvailablePhoneNumber[]>> {
+export async function searchPhoneNumbers(params: SearchPhoneNumbersParams): Promise<AitelResponse<AvailablePhoneNumber[]>> {
   const queryParams: Record<string, string> = { country: params.country };
   if (params.pattern) queryParams.pattern = params.pattern;
-  return callBolnaProxy<AvailablePhoneNumber[]>("search-phone-numbers", queryParams);
+  return callAitelProxy<AvailablePhoneNumber[]>("search-phone-numbers", queryParams);
 }
 
-export async function listPhoneNumbers(): Promise<BolnaResponse<PhoneNumber[]>> {
-  return callBolnaProxy<PhoneNumber[]>("list-phone-numbers");
+export async function listPhoneNumbers(): Promise<AitelResponse<PhoneNumber[]>> {
+  return callAitelProxy<PhoneNumber[]>("list-phone-numbers");
 }
 
 export interface AssignPhoneNumberRequest {
@@ -628,8 +628,8 @@ export interface AssignPhoneNumberRequest {
 
 export async function assignPhoneNumberToAgent(
   options: AssignPhoneNumberRequest
-): Promise<BolnaResponse<{ message: string }>> {
-  return callBolnaProxy<{ message: string }>("assign-phone-number", undefined, options);
+): Promise<AitelResponse<{ message: string }>> {
+  return callAitelProxy<{ message: string }>("assign-phone-number", undefined, options);
 }
 
 // ==========================================

@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { updateBolnaAgent } from "@/lib/aitel";
+import { updateAitelAgent } from "@/lib/aitel";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
@@ -147,7 +147,7 @@ export default function AgentEditor() {
       }
 
       // Update in Aitel
-      const { error: bolnaError } = await updateBolnaAgent(agent.external_agent_id, {
+      const { error: aitelError } = await updateAitelAgent(agent.external_agent_id, {
         agent_prompts: {
           task_1: {
             system_prompt: systemPrompt,
@@ -155,8 +155,8 @@ export default function AgentEditor() {
         },
       });
 
-      if (bolnaError) {
-        throw new Error(bolnaError);
+      if (aitelError) {
+        throw new Error(aitelError);
       }
 
       // Update in our database
