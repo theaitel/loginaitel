@@ -30,6 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useSearchParams } from "react-router-dom";
+import { useCallQueueProcessor } from "@/hooks/useCallQueueProcessor";
 import { 
   Search, 
   Upload, 
@@ -40,7 +41,9 @@ import {
   Filter,
   RefreshCw,
   Plus,
-  Download
+  Download,
+  Loader2,
+  PhoneCall
 } from "lucide-react";
 import { format } from "date-fns";
 import { RELeadUploadDialog } from "@/components/realestate/RELeadUploadDialog";
@@ -113,6 +116,28 @@ export default function RELeads() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [scheduleVisitDialogOpen, setScheduleVisitDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<RELead | null>(null);
+
+  // Call queue processor - auto-processes pending calls
+  const { 
+    pendingCount: queuePendingCount, 
+    inProgressCount: queueInProgressCount,
+    triggerProcess 
+  } = useCallQueueProcessor({
+    enabled: true,
+    intervalMs: 5000,
+    onProcess: (result) => {
+      if (result.processed > 0) {
+        toast({
+          title: "Calls Processing",
+          description: `Processing ${result.processed} calls. ${result.active_calls} active.`,
+        });
+        fetchLeads(); // Refresh leads to show updated status
+      }
+    },
+    onError: (error) => {
+      console.error("Queue processing error:", error);
+    },
+  });
 
   const fetchLeads = useCallback(async () => {
     if (!user) return;
@@ -282,6 +307,40 @@ export default function RELeads() {
             </Button>
           </div>
         </div>
+
+        {/* Call Queue Status */}
+        {(queuePendingCount > 0 || queueInProgressCount > 0) && (
+          <Card className="border-blue-500 bg-blue-500/5">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                    <span className="font-medium">Call Queue Active</span>
+                  </div>
+                  <div className="flex gap-4 text-sm">
+                    <span>
+                      <Badge variant="outline" className="mr-1">{queueInProgressCount}</Badge>
+                      In Progress
+                    </span>
+                    <span>
+                      <Badge variant="secondary" className="mr-1">{queuePendingCount}</Badge>
+                      Pending
+                    </span>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => triggerProcess()}
+                >
+                  <PhoneCall className="h-4 w-4 mr-2" />
+                  Process Now
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Filters */}
         <Card>
