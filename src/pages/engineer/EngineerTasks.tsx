@@ -1142,41 +1142,50 @@ export default function EngineerTasks() {
               </div>
               
               {/* Existing Demo Calls */}
-              {demoCalls.filter(call => call.status === 'completed').length === 0 ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  <Phone className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No completed demo calls yet.</p>
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {demoCalls.filter(call => call.status === 'completed').map((call) => (
-                    <div
-                      key={call.id}
-                      className={`border-2 p-3 cursor-pointer transition-colors ${
-                        selectedDemoCallId === call.id && !uploadedAudioFile
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border hover:border-primary/50'
-                      }`}
-                      onClick={() => {
-                        setSelectedDemoCallId(call.id);
-                        setUploadedAudioFile(null);
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{call.phone_number}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Duration: {call.duration_seconds || 0}s • {format(new Date(call.created_at), "MMM d, h:mm a")}
-                          </p>
+              {(() => {
+                // Show calls that are completed OR have a recording/uploaded audio (indicating call finished)
+                const availableCalls = demoCalls.filter(call => 
+                  call.status === 'completed' || 
+                  call.recording_url || 
+                  call.uploaded_audio_url
+                );
+                
+                return availableCalls.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground">
+                    <Phone className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No completed demo calls yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {availableCalls.map((call) => (
+                      <div
+                        key={call.id}
+                        className={`border-2 p-3 cursor-pointer transition-colors ${
+                          selectedDemoCallId === call.id && !uploadedAudioFile
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                        onClick={() => {
+                          setSelectedDemoCallId(call.id);
+                          setUploadedAudioFile(null);
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{call.phone_number}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Duration: {call.duration_seconds || 0}s • {format(new Date(call.created_at), "MMM d, h:mm a")}
+                            </p>
+                          </div>
+                          {selectedDemoCallId === call.id && !uploadedAudioFile && (
+                            <CheckCircle className="h-5 w-5 text-primary" />
+                          )}
                         </div>
-                        {selectedDemoCallId === call.id && !uploadedAudioFile && (
-                          <CheckCircle className="h-5 w-5 text-primary" />
-                        )}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           )}
           <DialogFooter>
