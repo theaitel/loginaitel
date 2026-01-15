@@ -53,7 +53,7 @@ import {
 
 interface Call {
   id: string;
-  lead_id: string;
+  lead_id: string; // Now stores phone number
   agent_id: string;
   status: string;
   duration_seconds: number | null;
@@ -68,9 +68,7 @@ interface Call {
   metadata: unknown;
   external_call_id: string | null;
   batch_id: string | null;
-  agent?: {
-    name: string;
-  };
+  agent_name?: string;
 }
 
 const statusConfig: Record<string, { label: string; icon: typeof Phone; className: string }> = {
@@ -119,7 +117,7 @@ export default function ClientCalls() {
   // Subscribe to realtime updates
   useRealtimeCalls({ queryKey: callsQueryKey, clientId: user?.id });
 
-  // Fetch calls - only show batch calls OR calls where lead was uploaded by the client
+  // Fetch calls with agent names
   const { data: calls, isLoading } = useQuery({
     queryKey: callsQueryKey,
     enabled: !!user?.id,
@@ -128,15 +126,21 @@ export default function ClientCalls() {
       
       const { data, error } = await supabase
         .from("calls")
-        .select("*")
+        .select(`
+          *,
+          aitel_agents!calls_agent_id_fkey ( agent_name )
+        `)
         .eq("client_id", user!.id)
         .gte("created_at", startDate)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       
-      // Map to include agent placeholder
-      return data?.map(d => ({ ...d, agent: { name: 'Agent' } })) as Call[];
+      // Map to include agent_name
+      return data?.map(d => ({ 
+        ...d, 
+        agent_name: (d as any).aitel_agents?.agent_name || 'Unknown Agent'
+      })) as Call[];
     },
   });
 
@@ -231,11 +235,12 @@ export default function ClientCalls() {
     if (!filteredCalls) return;
     
     const csv = [
-      ["Date", "Agent", "Status", "Duration", "Connected", "Sentiment"].join(","),
+      ["Date", "Phone Number", "Agent", "Status", "Duration", "Connected", "Sentiment"].join(","),
       ...filteredCalls.map((call) =>
         [
           format(new Date(call.created_at), "yyyy-MM-dd HH:mm"),
-          call.agent?.name || "",
+          call.lead_id || "",
+          call.agent_name || "",
           call.status,
           formatDuration(call.duration_seconds),
           call.connected ? "Yes" : "No",
@@ -358,7 +363,7 @@ export default function ClientCalls() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-b-2 border-border hover:bg-transparent">
-                    <TableHead className="font-bold">Call ID</TableHead>
+                    <TableHead className="font-bold">Phone Number</TableHead>
                     <TableHead className="font-bold">Agent</TableHead>
                     <TableHead className="font-bold">Status</TableHead>
                     <TableHead className="font-bold">Duration</TableHead>
@@ -388,9 +393,9 @@ export default function ClientCalls() {
                       return (
                         <TableRow key={call.id} className="border-b-2 border-border">
                           <TableCell>
-                            <p className="font-mono text-sm">#{call.id.slice(0, 8)}</p>
+                            <p className="font-mono text-sm">{call.lead_id || "—"}</p>
                           </TableCell>
-                          <TableCell>{call.agent?.name || "—"}</TableCell>
+                          <TableCell>{call.agent_name || "—"}</TableCell>
                           <TableCell>
                             <span
                               className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium border-2 ${status.className}`}
