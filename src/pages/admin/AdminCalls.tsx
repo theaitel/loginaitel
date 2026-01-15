@@ -193,7 +193,9 @@ export default function AdminCalls() {
 
   // Filter calls
   const filteredCalls = calls?.filter((call) => {
-    const matchesSearch = call.id.toLowerCase().includes(search.toLowerCase());
+    // Strip "#" prefix from search query if present
+    const searchQuery = search.toLowerCase().replace(/^#/, '');
+    const matchesSearch = searchQuery === '' || call.id.toLowerCase().includes(searchQuery);
     const matchesStatus = statusFilter === "all" || call.status === statusFilter;
     const matchesClient = clientFilter === "all" || call.client_id === clientFilter;
     return matchesSearch && matchesStatus && matchesClient;
