@@ -76,22 +76,40 @@ export default function ClientBilling() {
     },
   });
 
-  // Check for low balance and show alert
+  // Check for low balance and show alert + send email
   useEffect(() => {
-    if (creditData?.settings?.low_balance_alert_enabled && creditData?.balance) {
-      const threshold = creditData.settings.low_balance_threshold || 50;
-      if (creditData.balance <= threshold) {
-        toast.warning(`Low credit balance! You have ${creditData.balance} credits remaining.`, {
-          id: 'low-balance-alert',
-          duration: 10000,
-          action: {
-            label: "Buy Credits",
-            onClick: () => setBuyDialogOpen(true),
-          },
-        });
+    const sendLowBalanceAlert = async () => {
+      if (creditData?.settings?.low_balance_alert_enabled && creditData?.balance && user?.id) {
+        const threshold = creditData.settings.low_balance_threshold || 50;
+        if (creditData.balance <= threshold) {
+          // Show in-app toast
+          toast.warning(`Low credit balance! You have ${creditData.balance} credits remaining.`, {
+            id: 'low-balance-alert',
+            duration: 10000,
+            action: {
+              label: "Buy Credits",
+              onClick: () => setBuyDialogOpen(true),
+            },
+          });
+
+          // Send email alert (edge function handles 24h throttling)
+          try {
+            await supabase.functions.invoke("send-low-balance-alert", {
+              body: {
+                clientId: user.id,
+                balance: creditData.balance,
+                threshold,
+              },
+            });
+          } catch (error) {
+            console.error("Failed to send low balance email:", error);
+          }
+        }
       }
-    }
-  }, [creditData]);
+    };
+
+    sendLowBalanceAlert();
+  }, [creditData, user?.id]);
 
   // Fetch transactions
   const { data: transactions, isLoading: transactionsLoading } = useQuery({
