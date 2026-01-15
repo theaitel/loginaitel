@@ -30,7 +30,6 @@ import AgentEditor from "./pages/engineer/AgentEditor";
 import DemoCallsPage from "./pages/engineer/DemoCallsPage";
 import EngineerSettings from "./pages/engineer/EngineerSettings";
 import EngineerTimeTracker from "./pages/engineer/EngineerTimeTracker";
-import WebCallTestPage from "./pages/shared/WebCallTestPage";
 import MakeCallPage from "./pages/shared/MakeCallPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminAgents from "./pages/admin/AdminAgents";
@@ -169,14 +168,6 @@ const App = () => (
               }
             />
             <Route
-              path="/admin/web-call"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <WebCallTestPage role="admin" />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/admin/make-call"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
@@ -296,14 +287,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/engineer/web-call"
-              element={
-                <ProtectedRoute allowedRoles={["engineer"]}>
-                  <WebCallTestPage role="engineer" />
-                </ProtectedRoute>
-              }
-            />
+            
             
             {/* Client Routes - Protected */}
             <Route
@@ -367,14 +351,6 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["client", "admin"]}>
                   <ClientPhoneNumbers />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/client/web-call"
-              element={
-                <ProtectedRoute allowedRoles={["client"]}>
-                  <WebCallTestPage role="client" />
                 </ProtectedRoute>
               }
             />
