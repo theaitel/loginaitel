@@ -16,8 +16,6 @@ import {
   Trophy,
   Clock,
   Upload,
-  Layers,
-  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,9 +34,6 @@ const adminNavItems = [
   { icon: Upload, label: "Leads", href: "/admin/leads" },
   { icon: Phone, label: "Make Call", href: "/admin/make-call" },
   { icon: Phone, label: "Calls", href: "/admin/calls" },
-  { icon: Layers, label: "Batch Calls", href: "/admin/batches" },
-  { icon: BarChart3, label: "Batch Analytics", href: "/admin/batch-analytics" },
-  { icon: History, label: "Call History", href: "/admin/call-history" },
   { icon: Phone, label: "Phone Numbers", href: "/admin/phone-numbers" },
   { icon: CreditCard, label: "Credits", href: "/admin/credits" },
   { icon: Settings, label: "Settings", href: "/admin/settings" },
@@ -62,8 +57,6 @@ const clientNavItems = [
   { icon: Phone, label: "Make Call", href: "/client/make-call" },
   { icon: Phone, label: "Call History", href: "/client/calls" },
   { icon: Upload, label: "Leads", href: "/client/leads" },
-  { icon: Layers, label: "Batch Calls", href: "/client/batches" },
-  { icon: BarChart3, label: "Batch Analytics", href: "/client/batch-analytics" },
   { icon: Phone, label: "Phone Numbers", href: "/client/phone-numbers" },
   { icon: CreditCard, label: "Credits & Billing", href: "/client/billing" },
   { icon: Settings, label: "Settings", href: "/client/settings" },
