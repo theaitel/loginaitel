@@ -28,6 +28,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -59,6 +65,7 @@ import {
   RefreshCw,
   Eye,
   Settings2,
+  Clock,
 } from "lucide-react";
 
 interface CampaignLead {
@@ -155,6 +162,29 @@ export default function CampaignDetail() {
     },
   });
 
+  // Fetch call queue data for retry info
+  const { data: callQueueData, refetch: refetchQueue } = useQuery({
+    queryKey: ["campaign-call-queue-retry", campaignId],
+    enabled: !!campaignId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("campaign_call_queue")
+        .select("lead_id, retry_count, next_retry_at, status")
+        .eq("campaign_id", campaignId!);
+      if (error) throw error;
+      // Create a map of lead_id to retry info
+      const retryMap: Record<string, { retry_count: number; next_retry_at: string | null; status: string }> = {};
+      (data || []).forEach((item) => {
+        retryMap[item.lead_id] = {
+          retry_count: item.retry_count || 0,
+          next_retry_at: item.next_retry_at,
+          status: item.status,
+        };
+      });
+      return retryMap;
+    },
+  });
+
   // Realtime subscription for campaign_leads updates
   useEffect(() => {
     if (!campaignId) return;
@@ -212,6 +242,7 @@ export default function CampaignDetail() {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["campaign-active-calls", campaignId] });
+          refetchQueue();
         }
       )
       .subscribe();
@@ -741,23 +772,48 @@ export default function CampaignDetail() {
                         <TableCell>
                           {lead.call_status ? (
                             <div className="flex flex-col gap-1">
-                              <Badge 
-                                variant="outline" 
-                                className={
-                                  lead.call_status === "connected" 
-                                    ? "bg-green-500/10 text-green-600 border-green-500" 
-                                    : lead.call_status === "in_progress"
-                                    ? "bg-blue-500/10 text-blue-600 border-blue-500 animate-pulse"
-                                    : lead.call_status === "not_connected"
-                                    ? "bg-yellow-500/10 text-yellow-600 border-yellow-500"
-                                    : "bg-muted"
-                                }
-                              >
-                                {lead.call_status === "in_progress" && (
-                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                )}
-                                {lead.call_status}
-                              </Badge>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge 
+                                      variant="outline" 
+                                      className={
+                                        lead.call_status === "connected" 
+                                          ? "bg-green-500/10 text-green-600 border-green-500 cursor-help" 
+                                          : lead.call_status === "in_progress"
+                                          ? "bg-blue-500/10 text-blue-600 border-blue-500 animate-pulse cursor-help"
+                                          : lead.call_status === "not_connected"
+                                          ? "bg-yellow-500/10 text-yellow-600 border-yellow-500 cursor-help"
+                                          : "bg-muted cursor-help"
+                                      }
+                                    >
+                                      {lead.call_status === "in_progress" && (
+                                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                      )}
+                                      {callQueueData?.[lead.id]?.status === "retry_pending" && (
+                                        <Clock className="h-3 w-3 mr-1" />
+                                      )}
+                                      {lead.call_status}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="max-w-[200px]">
+                                    {callQueueData?.[lead.id] ? (
+                                      <div className="text-xs space-y-1">
+                                        <p><strong>Retry attempts:</strong> {callQueueData[lead.id].retry_count}/{campaign?.max_daily_retries || 5}</p>
+                                        {callQueueData[lead.id].status === "retry_pending" && callQueueData[lead.id].next_retry_at && (
+                                          <p><strong>Next retry:</strong> {format(new Date(callQueueData[lead.id].next_retry_at!), "h:mm a")}</p>
+                                        )}
+                                        {callQueueData[lead.id].status === "max_retries_reached" && (
+                                          <p className="text-yellow-600">Max retries reached for today</p>
+                                        )}
+                                        <p><strong>Queue status:</strong> {callQueueData[lead.id].status}</p>
+                                      </div>
+                                    ) : (
+                                      <p className="text-xs">No retry info available</p>
+                                    )}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                               {lead.call_duration !== null && lead.call_duration > 0 && (
                                 <span className="text-xs text-muted-foreground">
                                   {Math.floor(lead.call_duration / 60)}:{String(lead.call_duration % 60).padStart(2, '0')}
