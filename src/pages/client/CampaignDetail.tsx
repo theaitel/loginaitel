@@ -121,6 +121,22 @@ export default function CampaignDetail() {
     },
   });
 
+  // Fetch active calls count (in progress)
+  const { data: activeCallsCount } = useQuery({
+    queryKey: ["campaign-active-calls", campaignId],
+    enabled: !!campaignId,
+    refetchInterval: 5000, // Auto-refresh every 5 seconds
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("campaign_call_queue")
+        .select("*", { count: "exact", head: true })
+        .eq("campaign_id", campaignId!)
+        .eq("status", "in_progress");
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+
   // Fetch campaign leads
   const { data: leads, isLoading: leadsLoading } = useQuery({
     queryKey: ["campaign-leads", campaignId],
@@ -333,7 +349,15 @@ export default function CampaignDetail() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid sm:grid-cols-5 gap-4">
+        <div className="grid sm:grid-cols-6 gap-4">
+          {/* Active Calls Indicator */}
+          <div className={`border-2 p-4 text-center ${activeCallsCount && activeCallsCount > 0 ? "border-primary/50 bg-primary/5 animate-pulse" : "border-border bg-card"}`}>
+            <PhoneCall className={`h-5 w-5 mx-auto mb-2 ${activeCallsCount && activeCallsCount > 0 ? "text-primary" : "text-muted-foreground"}`} />
+            <p className={`text-2xl font-bold ${activeCallsCount && activeCallsCount > 0 ? "text-primary" : ""}`}>
+              {activeCallsCount || 0}
+            </p>
+            <p className="text-xs text-muted-foreground">Active Calls</p>
+          </div>
           <div className="border-2 border-border bg-card p-4 text-center">
             <Users className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
             <p className="text-2xl font-bold">{leads?.length || 0}</p>
