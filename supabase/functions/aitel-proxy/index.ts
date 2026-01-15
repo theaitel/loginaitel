@@ -285,6 +285,21 @@ serve(async (req) => {
           );
         }
 
+        // Get the client's allocated phone number
+        const { data: clientPhone } = await supabase
+          .from("client_phone_numbers")
+          .select("phone_number")
+          .eq("client_id", body.client_id)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (!clientPhone?.phone_number) {
+          return new Response(
+            JSON.stringify({ error: "No phone number allocated. Please contact admin to allocate a phone number." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         // Make outbound call via Bolna - POST /call using the actual Bolna agent ID
         response = await fetch(`${BOLNA_API_BASE}/call`, {
           method: "POST",
@@ -295,7 +310,7 @@ serve(async (req) => {
           body: JSON.stringify({
             agent_id: agentRecord.external_agent_id,
             recipient_phone_number: lead.phone_number,
-            from_phone_number: body.from_phone_number,
+            from_phone_number: clientPhone.phone_number,
             user_data: body.user_data,
           }),
         });
@@ -304,14 +319,14 @@ serve(async (req) => {
           const callResult = await response.json();
           
           // Create call record in database - execution_id is the call identifier
-          await supabase.from("calls").insert({
+          const { data: callRecord } = await supabase.from("calls").insert({
             lead_id: body.lead_id,
             agent_id: body.agent_id,
             client_id: body.client_id,
             external_call_id: callResult.execution_id,
             status: "initiated",
             started_at: new Date().toISOString(),
-          });
+          }).select("id").single();
 
           // Update lead status based on which table it came from
           if (leadTable === "leads") {
@@ -320,11 +335,20 @@ serve(async (req) => {
               .update({ status: "queued" })
               .eq("id", body.lead_id);
           } else {
-            // For real_estate_leads, update stage to 'contacted' if it's still 'new'
+            // For real_estate_leads, update last_call_at and create real_estate_calls record
             await supabase
               .from("real_estate_leads")
               .update({ last_call_at: new Date().toISOString() })
               .eq("id", body.lead_id);
+
+            // Create real_estate_calls record for tracking
+            if (callRecord?.id) {
+              await supabase.from("real_estate_calls").insert({
+                lead_id: body.lead_id,
+                call_id: callRecord.id,
+                client_id: body.client_id,
+              });
+            }
           }
 
           return new Response(

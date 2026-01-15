@@ -231,6 +231,39 @@ export type Database = {
         }
         Relationships: []
       }
+      client_phone_numbers: {
+        Row: {
+          allocated_at: string
+          allocated_by: string
+          client_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          phone_number: string
+          updated_at: string
+        }
+        Insert: {
+          allocated_at?: string
+          allocated_by: string
+          client_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          phone_number: string
+          updated_at?: string
+        }
+        Update: {
+          allocated_at?: string
+          allocated_by?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          phone_number?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       credit_transactions: {
         Row: {
           amount: number

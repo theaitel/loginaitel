@@ -16,6 +16,7 @@ import { Phone, RefreshCw, Bot, DollarSign, Users, Link } from "lucide-react";
 import { listPhoneNumbers, PhoneNumber } from "@/lib/aitel";
 import { supabase } from "@/integrations/supabase/client";
 import { PhoneNumberAssignment } from "@/components/phone/PhoneNumberAssignment";
+import { ClientPhoneAllocation } from "@/components/admin/ClientPhoneAllocation";
 
 // Mask phone number for admin view: +91 ******4321
 const maskPhoneNumber = (phoneNumber: string): string => {
@@ -167,11 +168,15 @@ export default function AdminPhoneNumbers() {
           </Card>
         </div>
 
-        {/* Tabs for Overview and Assignment */}
+        {/* Tabs for Overview, Client Allocation, and Agent Assignment */}
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="assignment">
+            <TabsTrigger value="client-allocation">
+              <Users className="h-4 w-4 mr-2" />
+              Allocate to Clients
+            </TabsTrigger>
+            <TabsTrigger value="agent-assignment">
               <Link className="h-4 w-4 mr-2" />
               Assign to Agents
             </TabsTrigger>
@@ -249,7 +254,11 @@ export default function AdminPhoneNumbers() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="assignment">
+          <TabsContent value="client-allocation">
+            <ClientPhoneAllocation />
+          </TabsContent>
+
+          <TabsContent value="agent-assignment">
             <PhoneNumberAssignment showClientColumn={true} />
           </TabsContent>
         </Tabs>
