@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Mic, Shield, Wrench, Building2, ArrowLeft } from "lucide-react";
@@ -26,9 +27,9 @@ const roles = [
   },
 ];
 
-export default function LoginSelect() {
+const LoginSelect = forwardRef<HTMLDivElement>((_, ref) => {
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div ref={ref} className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="p-6 border-b-2 border-border">
         <Link to="/" className="flex items-center gap-2 w-fit">
@@ -74,4 +75,8 @@ export default function LoginSelect() {
       </main>
     </div>
   );
-}
+});
+
+LoginSelect.displayName = "LoginSelect";
+
+export default LoginSelect;
