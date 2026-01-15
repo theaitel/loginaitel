@@ -67,10 +67,6 @@ interface Call {
   sentiment: string | null;
   metadata: unknown;
   external_call_id: string | null;
-  lead?: {
-    name: string | null;
-    phone_number_masked: string | null;
-  };
   agent?: {
     name: string;
   };
@@ -125,21 +121,16 @@ export default function AdminCalls() {
     queryFn: async () => {
       const startDate = subDays(new Date(), parseInt(dateRange)).toISOString();
       
-      // Admin uses leads_admin_view which masks phone numbers
       const { data, error } = await supabase
         .from("calls")
-        .select(`
-          *,
-          lead:leads_admin_view(name, phone_number_masked)
-        `)
+        .select("*")
         .gte("created_at", startDate)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data?.map(d => ({ 
         ...d, 
-        agent: { name: 'Agent' },
-        lead: d.lead ? { ...d.lead, phone_number: d.lead.phone_number_masked } : undefined
+        agent: { name: 'Agent' }
       })) as Call[];
     },
   });
@@ -172,9 +163,7 @@ export default function AdminCalls() {
 
   // Filter calls
   const filteredCalls = calls?.filter((call) => {
-    const matchesSearch =
-      call.lead?.name?.toLowerCase().includes(search.toLowerCase()) ||
-      call.lead?.phone_number_masked?.includes(search);
+    const matchesSearch = call.id.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || call.status === statusFilter;
     const matchesClient = clientFilter === "all" || call.client_id === clientFilter;
     return matchesSearch && matchesStatus && matchesClient;
@@ -255,13 +244,12 @@ export default function AdminCalls() {
     if (!filteredCalls) return;
     
     const csv = [
-      ["Date", "Client", "Lead", "Phone (Masked)", "Agent", "Status", "Duration", "Connected", "Sentiment"].join(","),
+      ["Date", "Client", "Call ID", "Agent", "Status", "Duration", "Connected", "Sentiment"].join(","),
       ...filteredCalls.map((call) =>
         [
           format(new Date(call.created_at), "yyyy-MM-dd HH:mm"),
           getClientName(call.client_id),
-          call.lead?.name || "Unknown",
-          call.lead?.phone_number_masked || "",
+          call.id.slice(0, 8),
           call.agent?.name || "",
           call.status,
           formatDuration(call.duration_seconds),
@@ -279,13 +267,10 @@ export default function AdminCalls() {
     a.click();
   };
 
-  // Transform for dialog (use masked phone as phone_number)
+  // Transform for dialog
   const getCallForDialog = (call: Call) => ({
     ...call,
-    lead: call.lead ? {
-      name: call.lead.name,
-      phone_number: call.lead.phone_number_masked || ""
-    } : undefined
+    lead: undefined
   });
 
   return (
@@ -445,12 +430,7 @@ export default function AdminCalls() {
                             <p className="font-medium text-sm">{getClientName(call.client_id)}</p>
                           </TableCell>
                           <TableCell>
-                            <div>
-                              <p className="font-medium">{call.lead?.name || "Unknown"}</p>
-                              <p className="text-xs text-muted-foreground font-mono">
-                                {call.lead?.phone_number_masked}
-                              </p>
-                            </div>
+                            <p className="font-mono text-sm">#{call.id.slice(0, 8)}</p>
                           </TableCell>
                           <TableCell>
                             <span

@@ -67,10 +67,7 @@ interface Call {
   sentiment: string | null;
   metadata: unknown;
   external_call_id: string | null;
-  lead?: {
-    name: string | null;
-    phone_number: string;
-  };
+  batch_id: string | null;
   agent?: {
     name: string;
   };
@@ -129,31 +126,17 @@ export default function ClientCalls() {
     queryFn: async () => {
       const startDate = subDays(new Date(), parseInt(dateRange)).toISOString();
       
-      // First get calls with lead info
       const { data, error } = await supabase
         .from("calls")
-        .select(`
-          *,
-          lead:leads(name, phone_number, uploaded_by)
-        `)
+        .select("*")
         .eq("client_id", user!.id)
         .gte("created_at", startDate)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       
-      // Filter to only show:
-      // 1. Batch calls (have batch_id) - these are production calls for the client
-      // 2. Calls where the lead was uploaded by the client themselves (their own test calls)
-      // This excludes admin/engineer test calls using client's agents
-      const filteredData = data?.filter(call => {
-        const isBatchCall = call.batch_id !== null;
-        const isClientOwnCall = (call.lead as any)?.uploaded_by === user!.id;
-        return isBatchCall || isClientOwnCall;
-      });
-      
-      // Map to include agent placeholder since we removed the join
-      return filteredData?.map(d => ({ ...d, agent: { name: 'Agent' } })) as Call[];
+      // Map to include agent placeholder
+      return data?.map(d => ({ ...d, agent: { name: 'Agent' } })) as Call[];
     },
   });
 
@@ -174,9 +157,7 @@ export default function ClientCalls() {
 
   // Filter calls
   const filteredCalls = calls?.filter((call) => {
-    const matchesSearch =
-      call.lead?.name?.toLowerCase().includes(search.toLowerCase()) ||
-      call.lead?.phone_number?.includes(search);
+    const matchesSearch = call.id.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || call.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -250,12 +231,10 @@ export default function ClientCalls() {
     if (!filteredCalls) return;
     
     const csv = [
-      ["Date", "Lead", "Phone", "Agent", "Status", "Duration", "Connected", "Sentiment"].join(","),
+      ["Date", "Agent", "Status", "Duration", "Connected", "Sentiment"].join(","),
       ...filteredCalls.map((call) =>
         [
           format(new Date(call.created_at), "yyyy-MM-dd HH:mm"),
-          call.lead?.name || "Unknown",
-          call.lead?.phone_number || "",
           call.agent?.name || "",
           call.status,
           formatDuration(call.duration_seconds),
@@ -379,7 +358,7 @@ export default function ClientCalls() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-b-2 border-border hover:bg-transparent">
-                    <TableHead className="font-bold">Lead</TableHead>
+                    <TableHead className="font-bold">Call ID</TableHead>
                     <TableHead className="font-bold">Agent</TableHead>
                     <TableHead className="font-bold">Status</TableHead>
                     <TableHead className="font-bold">Duration</TableHead>
@@ -409,12 +388,7 @@ export default function ClientCalls() {
                       return (
                         <TableRow key={call.id} className="border-b-2 border-border">
                           <TableCell>
-                            <div>
-                              <p className="font-medium">{call.lead?.name || "Unknown"}</p>
-                              <p className="text-xs text-muted-foreground font-mono">
-                                {call.lead?.phone_number}
-                              </p>
-                            </div>
+                            <p className="font-mono text-sm">#{call.id.slice(0, 8)}</p>
                           </TableCell>
                           <TableCell>{call.agent?.name || "—"}</TableCell>
                           <TableCell>

@@ -17,7 +17,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Phone, Loader2, User, Clock, CheckCircle, XCircle, AlertCircle, ShieldAlert, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -38,13 +37,6 @@ interface Agent {
   engineer_id?: string | null;
 }
 
-interface Lead {
-  id: string;
-  name: string | null;
-  phone_number: string;
-  client_id: string;
-}
-
 interface RecentCall {
   id: string;
   status: string;
@@ -52,10 +44,6 @@ interface RecentCall {
   agent_id: string;
   duration_seconds?: number;
   external_call_id?: string | null;
-  lead: {
-    name: string | null;
-    phone_number: string;
-  } | null;
   agent: {
     agent_name: string;
   } | null;
@@ -86,11 +74,9 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
-  const [selectedLeadId, setSelectedLeadId] = useState<string>("");
   const [manualPhone, setManualPhone] = useState("");
   const [manualName, setManualName] = useState("");
   const [isCalling, setIsCalling] = useState(false);
-  const [callMode, setCallMode] = useState<"lead" | "manual">("lead");
   const [hasApprovedPrompts, setHasApprovedPrompts] = useState<boolean | null>(null);
 
   // Fetch agents
@@ -106,8 +92,7 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
         query = query.eq("client_id", user.id);
       }
 
-      // Engineers can only create leads for clients tied to agents assigned to them.
-      // Filter here to avoid selecting an agent that will later fail RLS on leads insert.
+      // Engineers can only use agents assigned to them with a client
       if (role === "engineer" && user) {
         query = query.eq("engineer_id", user.id).not("client_id", "is", null);
       }
@@ -115,25 +100,6 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
       const { data, error } = await query.order("agent_name");
       if (error) throw error;
       return data as Agent[];
-    },
-    enabled: !!user,
-  });
-
-  // Fetch leads
-  const { data: leads = [], isLoading: loadingLeads } = useQuery({
-    queryKey: ["leads-for-call", user?.id, role],
-    queryFn: async () => {
-      let query = supabase
-        .from("leads")
-        .select("id, name, phone_number, client_id");
-
-      if (role === "client" && user) {
-        query = query.eq("client_id", user.id);
-      }
-
-      const { data, error } = await query.order("name").limit(100);
-      if (error) throw error;
-      return data as Lead[];
     },
     enabled: !!user,
   });
@@ -166,46 +132,6 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
     }
   }, [role, approvedPromptsCheck]);
 
-  // Terminal statuses that indicate a call has ended
-  const TERMINAL_STATUSES = ['completed', 'failed', 'no-answer', 'busy', 'canceled', 'call-disconnected'];
-  const ACTIVE_STATUSES = ['initiated', 'queued', 'ringing', 'in-progress'];
-  const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
-
-  // Function to sync stale calls with Bolna API
-  const syncStaleCall = async (callId: string, externalCallId: string | null) => {
-    if (!externalCallId) {
-      // No external ID, mark as failed
-      await supabase
-        .from("calls")
-        .update({ status: 'failed', ended_at: new Date().toISOString() })
-        .eq("id", callId);
-      return;
-    }
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const response = await supabase.functions.invoke("aitel-proxy", {
-        body: { action: "sync-call-status", executionId: externalCallId },
-        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
-      });
-
-      if (response.error || !response.data?.status) {
-        // API call failed, mark as failed if stale
-        await supabase
-          .from("calls")
-          .update({ status: 'failed', ended_at: new Date().toISOString() })
-          .eq("id", callId);
-      }
-    } catch (error) {
-      console.error("Error syncing call status:", error);
-      // Mark as failed if we can't sync
-      await supabase
-        .from("calls")
-        .update({ status: 'failed', ended_at: new Date().toISOString() })
-        .eq("id", callId);
-    }
-  };
-
   // Fetch recent calls with agent info
   const { data: recentCalls = [], refetch: refetchCalls, isLoading: loadingCalls } = useQuery({
     queryKey: ["recent-calls", user?.id, role],
@@ -218,8 +144,7 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
           created_at,
           agent_id,
           duration_seconds,
-          external_call_id,
-          lead:leads(name, phone_number)
+          external_call_id
         `)
         .order("created_at", { ascending: false })
         .limit(15);
@@ -230,23 +155,6 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
 
       const { data, error } = await query;
       if (error) throw error;
-
-      // Check for stale active calls and sync them
-      const now = Date.now();
-      const staleCalls = (data || []).filter(call => {
-        if (!ACTIVE_STATUSES.includes(call.status)) return false;
-        const callAge = now - new Date(call.created_at).getTime();
-        return callAge > STALE_THRESHOLD_MS;
-      });
-
-      // Sync stale calls in background (don't block UI)
-      if (staleCalls.length > 0) {
-        Promise.all(staleCalls.map(call => syncStaleCall(call.id, call.external_call_id)))
-          .then(() => {
-            // Refetch after syncing
-            setTimeout(() => refetchCalls(), 1000);
-          });
-      }
       
       const agentIds = [...new Set((data || []).map(c => c.agent_id))];
       const { data: agentsData } = await supabase
@@ -290,7 +198,6 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
   }, [user, refetchCalls]);
 
   const selectedAgent = agents.find((a) => a.id === selectedAgentId);
-  const selectedLead = leads.find((l) => l.id === selectedLeadId);
 
   const handleMakeCall = async () => {
     if (!selectedAgentId || !user) {
@@ -302,80 +209,47 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
       return;
     }
 
-    let leadId = selectedLeadId;
+    if (!manualPhone) {
+      toast({
+        variant: "destructive",
+        title: "Missing Phone Number",
+        description: "Please enter a phone number",
+      });
+      return;
+    }
+
     // For engineers and admins, use the agent's client_id; for clients, use their own id
     const agentClientId = selectedAgent?.client_id;
-    let clientId = role === "client" ? user.id : agentClientId;
+    const clientId = role === "client" ? user.id : agentClientId;
 
     // Engineers MUST use an agent that has a client_id assigned
     if (role === "engineer" && !agentClientId) {
       toast({
         variant: "destructive",
-        title: "Cannot Create Lead",
+        title: "Cannot Make Call",
         description: "This agent is not assigned to a client. Select an agent with a client assigned.",
       });
       return;
     }
 
-    if (callMode === "manual") {
-      if (!manualPhone) {
-        toast({
-          variant: "destructive",
-          title: "Missing Phone Number",
-          description: "Please enter a phone number",
-        });
-        return;
-      }
-
-      if (!clientId) {
-        toast({
-          variant: "destructive",
-          title: "Missing Client",
-          description: "Cannot determine client for this lead. Please select an agent assigned to a client.",
-        });
-        return;
-      }
-
-      const { data: newLead, error: leadError } = await supabase
-        .from("leads")
-        .insert({
-          phone_number: manualPhone,
-          name: manualName || null,
-          client_id: clientId,
-          uploaded_by: user.id,
-          status: "new",
-        })
-        .select("id")
-        .single();
-
-      if (leadError) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to create lead: " + leadError.message,
-        });
-        return;
-      }
-
-      leadId = newLead.id;
-    } else {
-      if (!selectedLeadId) {
-        toast({
-          variant: "destructive",
-          title: "Missing Lead",
-          description: "Please select a lead to call",
-        });
-        return;
-      }
+    if (!clientId) {
+      toast({
+        variant: "destructive",
+        title: "Missing Client",
+        description: "Cannot determine client for this call. Please select an agent assigned to a client.",
+      });
+      return;
     }
 
     setIsCalling(true);
 
     try {
+      // Call directly via Bolna API with phone number
       const { data, error } = await makeCall({
-        lead_id: leadId,
+        phone_number: manualPhone,
         agent_id: selectedAgentId,
         client_id: clientId,
+        name: manualName || undefined,
       });
 
       if (error || !data) {
@@ -387,7 +261,6 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
         description: `Call queued successfully`,
       });
 
-      setSelectedLeadId("");
       setManualPhone("");
       setManualName("");
 
@@ -405,10 +278,6 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
     }
   };
 
-  const formatPhoneDisplay = (phone: string) => {
-    return phone;
-  };
-
   return (
     <DashboardLayout role={role}>
       <div className="space-y-6">
@@ -420,7 +289,7 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
               Make Call
             </h1>
             <p className="text-muted-foreground">
-              Initiate phone calls to leads using AI agents. Check call status in Call History.
+              Initiate phone calls using AI agents. Check call status in Call History.
             </p>
           </div>
           <Button variant="outline" onClick={() => refetchCalls()} disabled={loadingCalls}>
@@ -435,7 +304,7 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
             <CardHeader>
               <CardTitle>Call Configuration</CardTitle>
               <CardDescription>
-                Select an agent and recipient to make a call
+                Select an agent and enter phone number to make a call
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -489,77 +358,31 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
                     )}
                   </div>
 
-                  {/* Call Mode Tabs */}
-                  <Tabs value={callMode} onValueChange={(v) => setCallMode(v as "lead" | "manual")}>
-                    <TabsList className="w-full">
-                      <TabsTrigger value="lead" className="flex-1">Select Lead</TabsTrigger>
-                      <TabsTrigger value="manual" className="flex-1">Enter Number</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="lead" className="space-y-4 mt-4">
-                      <div className="space-y-2">
-                        <Label>Select Lead *</Label>
-                        {loadingLeads ? (
-                          <div className="h-10 bg-muted animate-pulse rounded" />
-                        ) : leads.length > 0 ? (
-                          <Select value={selectedLeadId} onValueChange={setSelectedLeadId}>
-                            <SelectTrigger className="border-2">
-                              <SelectValue placeholder="Choose a lead" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {leads.map((lead) => (
-                                <SelectItem key={lead.id} value={lead.id}>
-                                  <span className="flex items-center gap-2">
-                                    <User className="h-4 w-4" />
-                                    {lead.name || "Unknown"} - {formatPhoneDisplay(lead.phone_number)}
-                                  </span>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <p className="text-sm text-muted-foreground p-3 bg-muted/50 border-2 border-border">
-                            No leads available. Add leads first.
-                          </p>
-                        )}
-                      </div>
-
-                      {selectedLead && (
-                        <div className="p-3 bg-muted/50 border-2 border-border">
-                          <p className="font-medium">{selectedLead.name || "Unknown"}</p>
-                          <p className="font-mono text-sm text-muted-foreground">
-                            {formatPhoneDisplay(selectedLead.phone_number)}
-                          </p>
-                        </div>
-                      )}
-                    </TabsContent>
-
-                    <TabsContent value="manual" className="space-y-4 mt-4">
-                      <div className="space-y-2">
-                        <Label>Phone Number *</Label>
-                        <Input
-                          placeholder="+1234567890"
-                          value={manualPhone}
-                          onChange={(e) => setManualPhone(e.target.value)}
-                          className="border-2 font-mono"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Name (Optional)</Label>
-                        <Input
-                          placeholder="Contact name"
-                          value={manualName}
-                          onChange={(e) => setManualName(e.target.value)}
-                          className="border-2"
-                        />
-                      </div>
-                    </TabsContent>
-                  </Tabs>
+                  {/* Phone Number Input */}
+                  <div className="space-y-2">
+                    <Label>Phone Number *</Label>
+                    <Input
+                      placeholder="+1234567890"
+                      value={manualPhone}
+                      onChange={(e) => setManualPhone(e.target.value)}
+                      className="border-2 font-mono"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Name (Optional)</Label>
+                    <Input
+                      placeholder="Contact name"
+                      value={manualName}
+                      onChange={(e) => setManualName(e.target.value)}
+                      className="border-2"
+                    />
+                  </div>
 
                   {/* Make Call Button */}
                   <Button
                     onClick={handleMakeCall}
-                    disabled={isCalling || !selectedAgentId || (callMode === "lead" && !selectedLeadId) || (callMode === "manual" && !manualPhone)}
+                    disabled={isCalling || !selectedAgentId || !manualPhone}
                     className="w-full"
                     size="lg"
                   >
@@ -612,7 +435,7 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
                           </div>
                           <div>
                             <p className="font-medium text-sm">
-                              {call.lead?.name || call.lead?.phone_number || "Unknown"}
+                              Call #{call.id.slice(0, 8)}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {call.agent?.agent_name || "Unknown Agent"}
