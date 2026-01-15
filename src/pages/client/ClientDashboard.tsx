@@ -164,7 +164,22 @@ export default function ClientDashboard() {
     if (sentiment === "positive") return "Interested";
     if (sentiment === "negative") return "Not Interested";
     if (status === "completed") return "Callback";
-    return status;
+    
+    // Map various status values to readable labels
+    const statusMap: Record<string, string> = {
+      "initiated": "In Progress",
+      "in-progress": "In Progress",
+      "in_progress": "In Progress",
+      "ringing": "Calling",
+      "queued": "Queued",
+      "no-answer": "No Answer",
+      "no_answer": "No Answer",
+      "busy": "Busy",
+      "failed": "Failed",
+      "call-disconnected": "Disconnected",
+    };
+    
+    return statusMap[status] || status;
   };
 
   const formatDuration = (seconds: number | null) => {
