@@ -122,6 +122,155 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_leads: {
+        Row: {
+          call_duration: number | null
+          call_id: string | null
+          call_sentiment: string | null
+          call_status: string | null
+          call_summary: string | null
+          campaign_id: string
+          client_id: string
+          created_at: string
+          custom_fields: Json | null
+          email: string | null
+          id: string
+          interest_level: string | null
+          name: string
+          notes: string | null
+          phone_number: string
+          stage: string
+          updated_at: string
+        }
+        Insert: {
+          call_duration?: number | null
+          call_id?: string | null
+          call_sentiment?: string | null
+          call_status?: string | null
+          call_summary?: string | null
+          campaign_id: string
+          client_id: string
+          created_at?: string
+          custom_fields?: Json | null
+          email?: string | null
+          id?: string
+          interest_level?: string | null
+          name: string
+          notes?: string | null
+          phone_number: string
+          stage?: string
+          updated_at?: string
+        }
+        Update: {
+          call_duration?: number | null
+          call_id?: string | null
+          call_sentiment?: string | null
+          call_status?: string | null
+          call_summary?: string | null
+          campaign_id?: string
+          client_id?: string
+          created_at?: string
+          custom_fields?: Json | null
+          email?: string | null
+          id?: string
+          interest_level?: string | null
+          name?: string
+          notes?: string | null
+          phone_number?: string
+          stage?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_leads_call_id_fkey"
+            columns: ["call_id"]
+            isOneToOne: false
+            referencedRelation: "calls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_leads_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          agent_id: string | null
+          api_endpoint: string | null
+          api_headers: Json | null
+          api_key: string | null
+          client_id: string
+          concurrency_level: number
+          contacted_leads: number | null
+          created_at: string
+          description: string | null
+          google_sheet_id: string | null
+          google_sheet_range: string | null
+          id: string
+          interested_leads: number | null
+          name: string
+          not_interested_leads: number | null
+          partially_interested_leads: number | null
+          status: string
+          total_leads: number | null
+          updated_at: string
+        }
+        Insert: {
+          agent_id?: string | null
+          api_endpoint?: string | null
+          api_headers?: Json | null
+          api_key?: string | null
+          client_id: string
+          concurrency_level?: number
+          contacted_leads?: number | null
+          created_at?: string
+          description?: string | null
+          google_sheet_id?: string | null
+          google_sheet_range?: string | null
+          id?: string
+          interested_leads?: number | null
+          name: string
+          not_interested_leads?: number | null
+          partially_interested_leads?: number | null
+          status?: string
+          total_leads?: number | null
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string | null
+          api_endpoint?: string | null
+          api_headers?: Json | null
+          api_key?: string | null
+          client_id?: string
+          concurrency_level?: number
+          contacted_leads?: number | null
+          created_at?: string
+          description?: string | null
+          google_sheet_id?: string | null
+          google_sheet_range?: string | null
+          id?: string
+          interested_leads?: number | null
+          name?: string
+          not_interested_leads?: number | null
+          partially_interested_leads?: number | null
+          status?: string
+          total_leads?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "aitel_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_credits: {
         Row: {
           balance: number
