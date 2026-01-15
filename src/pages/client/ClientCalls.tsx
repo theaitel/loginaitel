@@ -117,7 +117,31 @@ export default function ClientCalls() {
   // Subscribe to realtime updates
   useRealtimeCalls({ queryKey: callsQueryKey, clientId: user?.id });
 
-  // Fetch calls with agent names
+  // Fetch agents for lookup
+  const { data: agents } = useQuery({
+    queryKey: ["client-agents-lookup", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("aitel_agents")
+        .select("id, agent_name")
+        .eq("client_id", user!.id);
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Create agent lookup map
+  const agentMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    agents?.forEach((a) => {
+      map[a.id] = a.agent_name;
+    });
+    return map;
+  }, [agents]);
+
+  // Fetch calls
   const { data: calls, isLoading } = useQuery({
     queryKey: callsQueryKey,
     enabled: !!user?.id,
@@ -126,65 +150,51 @@ export default function ClientCalls() {
       
       const { data, error } = await supabase
         .from("calls")
-        .select(`
-          *,
-          aitel_agents!calls_agent_id_fkey ( agent_name )
-        `)
+        .select("*")
         .eq("client_id", user!.id)
         .gte("created_at", startDate)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      
-      // Map to include agent_name
-      return data?.map(d => ({ 
-        ...d, 
-        agent_name: (d as any).aitel_agents?.agent_name || 'Unknown Agent'
-      })) as Call[];
+      return data as Call[];
     },
   });
 
-  // Fetch agents for filter
-  const { data: agents } = useQuery({
-    queryKey: ["client-agents-filter", user?.id],
-    enabled: !!user?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("aitel_agents" as any)
-        .select("id, agent_name")
-        .eq("client_id", user!.id);
+  // Enrich calls with agent names
+  const enrichedCalls = useMemo(() => {
+    return calls?.map((call) => ({
+      ...call,
+      agent_name: agentMap[call.agent_id] || "Unknown Agent",
+    }));
+  }, [calls, agentMap]);
 
-      if (error) throw error;
-      return (data as any[])?.map((a: any) => ({ id: a.id, name: a.agent_name })) || [];
-    },
-  });
-
-  // Filter calls
-  const filteredCalls = calls?.filter((call) => {
-    const matchesSearch = call.id.toLowerCase().includes(search.toLowerCase());
+  // Filter calls using enriched data
+  const filteredCalls = enrichedCalls?.filter((call) => {
+    const matchesSearch = call.lead_id?.toLowerCase().includes(search.toLowerCase()) || 
+                          call.id.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || call.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   // Calculate stats
   const stats = {
-    total: calls?.length || 0,
-    completed: calls?.filter((c) => c.status === "completed").length || 0,
-    connected: calls?.filter((c) => c.connected).length || 0,
-    avgDuration: calls?.length
+    total: enrichedCalls?.length || 0,
+    completed: enrichedCalls?.filter((c) => c.status === "completed").length || 0,
+    connected: enrichedCalls?.filter((c) => c.connected).length || 0,
+    avgDuration: enrichedCalls?.length
       ? Math.round(
-          calls.reduce((sum, c) => sum + (c.duration_seconds || 0), 0) / calls.length
+          enrichedCalls.reduce((sum, c) => sum + (c.duration_seconds || 0), 0) / enrichedCalls.length
         )
       : 0,
-    connectionRate: calls?.length
-      ? Math.round((calls.filter((c) => c.connected).length / calls.length) * 100)
+    connectionRate: enrichedCalls?.length
+      ? Math.round((enrichedCalls.filter((c) => c.connected).length / enrichedCalls.length) * 100)
       : 0,
   };
 
   // Prepare chart data
-  const statusDistribution = calls
+  const statusDistribution = enrichedCalls
     ? Object.entries(
-        calls.reduce((acc, call) => {
+        enrichedCalls.reduce((acc, call) => {
           acc[call.status] = (acc[call.status] || 0) + 1;
           return acc;
         }, {} as Record<string, number>)
@@ -194,9 +204,9 @@ export default function ClientCalls() {
       }))
     : [];
 
-  const sentimentDistribution = calls
+  const sentimentDistribution = enrichedCalls
     ? Object.entries(
-        calls.reduce((acc, call) => {
+        enrichedCalls.reduce((acc, call) => {
           const sentiment = call.sentiment || "neutral";
           acc[sentiment] = (acc[sentiment] || 0) + 1;
           return acc;
@@ -208,12 +218,12 @@ export default function ClientCalls() {
     : [];
 
   // Daily call volume
-  const dailyVolume = calls
+  const dailyVolume = enrichedCalls
     ? Array.from({ length: 7 }, (_, i) => {
         const date = subDays(new Date(), 6 - i);
         const dayStart = startOfDay(date);
         const dayEnd = endOfDay(date);
-        const count = calls.filter((c) => {
+        const count = enrichedCalls.filter((c) => {
           const callDate = new Date(c.created_at);
           return callDate >= dayStart && callDate <= dayEnd;
         }).length;
