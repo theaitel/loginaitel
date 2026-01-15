@@ -478,6 +478,20 @@ export default function CampaignDetail() {
             </Button>
           )}
 
+          {/* Show message if no agent assigned but there are leads */}
+          {newCount > 0 && !campaign?.agent_id && (
+            <Button
+              variant="outline"
+              asChild
+              className="border-orange-500 text-orange-600 hover:bg-orange-500/10"
+            >
+              <Link to="/client/agents">
+                <Play className="h-4 w-4 mr-2" />
+                Assign Agent to Start Calls
+              </Link>
+            </Button>
+          )}
+
           {/* Pause/Resume Campaign */}
           {campaign?.status === "active" && (
             <Button
