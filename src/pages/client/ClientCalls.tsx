@@ -38,7 +38,13 @@ import {
   PhoneOutgoing,
   ChevronLeft,
   ChevronRight,
+  Database,
 } from "lucide-react";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { CallDetailsDialog } from "@/components/calls/CallDetailsDialog";
@@ -70,6 +76,7 @@ interface CallDisplay {
   summary: string | null;
   external_call_id: string | null;
   call_type: "inbound" | "outbound" | null;
+  extracted_data: Record<string, unknown> | null;
 }
 
 const ITEMS_PER_PAGE = 20;
@@ -222,6 +229,7 @@ export default function ClientCalls() {
                 summary: exec.summary || null,
                 external_call_id: exec.id,
                 call_type: callType,
+                extracted_data: exec.extracted_data || null,
               };
             });
             allCalls.push(...mappedCalls);
@@ -484,6 +492,7 @@ export default function ClientCalls() {
                     <TableHead className="font-bold">Agent</TableHead>
                     <TableHead className="font-bold">Status</TableHead>
                     <TableHead className="font-bold">Duration</TableHead>
+                    <TableHead className="font-bold">Extracted Data</TableHead>
                     <TableHead className="font-bold">Date</TableHead>
                     <TableHead className="font-bold w-32">Actions</TableHead>
                   </TableRow>
@@ -491,14 +500,14 @@ export default function ClientCalls() {
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8">
+                      <TableCell colSpan={8} className="text-center py-8">
                         <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
                         Loading calls...
                       </TableCell>
                     </TableRow>
                   ) : paginatedCalls?.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8">
+                      <TableCell colSpan={8} className="text-center py-8">
                         <Phone className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                         <p className="text-muted-foreground">No calls found</p>
                       </TableCell>
@@ -536,6 +545,42 @@ export default function ClientCalls() {
                           </TableCell>
                           <TableCell className="font-mono">
                             {formatDuration(call.duration_seconds)}
+                          </TableCell>
+                          <TableCell>
+                            {call.extracted_data && Object.keys(call.extracted_data).length > 0 ? (
+                              <HoverCard>
+                                <HoverCardTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="gap-1 h-7 px-2">
+                                    <Database className="h-3 w-3" />
+                                    <span className="text-xs">{Object.keys(call.extracted_data).length} fields</span>
+                                  </Button>
+                                </HoverCardTrigger>
+                                <HoverCardContent className="w-80" align="start">
+                                  <div className="space-y-2">
+                                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                                      <Database className="h-4 w-4" />
+                                      Extracted Data
+                                    </h4>
+                                    <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                                      {Object.entries(call.extracted_data).map(([key, value]) => (
+                                        <div key={key} className="flex justify-between text-sm border-b border-border pb-1">
+                                          <span className="text-muted-foreground capitalize">
+                                            {key.replace(/_/g, ' ')}
+                                          </span>
+                                          <span className="font-medium text-right max-w-[150px] truncate">
+                                            {typeof value === 'boolean' 
+                                              ? (value ? 'Yes' : 'No')
+                                              : String(value ?? '—')}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </HoverCardContent>
+                              </HoverCard>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {format(new Date(call.created_at), "MMM d, HH:mm")}
