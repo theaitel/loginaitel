@@ -330,7 +330,9 @@ serve(async (req) => {
         }
 
         // Make outbound demo call via Bolna
-        response = await fetch(`${BOLNA_API_BASE}/call`, {
+        console.log("Making demo call to:", recipientPhone, "with agent:", demoAgentId);
+        
+        const demoCallResponse = await fetch(`${BOLNA_API_BASE}/call`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${BOLNA_API_KEY}`,
@@ -344,8 +346,9 @@ serve(async (req) => {
           }),
         });
 
-        if (response.ok) {
-          const demoCallResult = await response.json();
+        if (demoCallResponse.ok) {
+          const demoCallResult = await demoCallResponse.json();
+          console.log("Demo call initiated successfully:", demoCallResult);
           return new Response(
             JSON.stringify({ 
               success: true, 
@@ -355,8 +358,14 @@ serve(async (req) => {
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
+        } else {
+          const errorText = await demoCallResponse.text();
+          console.error("Demo call failed - Bolna API error:", demoCallResponse.status, errorText);
+          return new Response(
+            JSON.stringify({ error: `Call failed: ${errorText || 'Unknown error from provider'}` }),
+            { status: demoCallResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
         }
-        break;
 
       case "get-call-status":
         const callId = url.searchParams.get("call_id");
