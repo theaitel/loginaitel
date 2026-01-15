@@ -43,6 +43,7 @@ import { BulkCallDialog } from "@/components/campaigns/BulkCallDialog";
 import { GoogleSheetSync } from "@/components/campaigns/GoogleSheetSync";
 import { LeadDetailsDialog } from "@/components/campaigns/LeadDetailsDialog";
 import { RetrySettingsDialog } from "@/components/campaigns/RetrySettingsDialog";
+import { RetryTimelineDialog } from "@/components/campaigns/RetryTimelineDialog";
 import {
   Plus,
   Upload,
@@ -829,6 +830,12 @@ export default function CampaignDetail() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-1">
+                            <RetryTimelineDialog
+                              leadId={lead.id}
+                              leadName={lead.name}
+                              campaignId={campaignId!}
+                              maxDailyRetries={campaign?.max_daily_retries || 5}
+                            />
                             <Button
                               variant="ghost"
                               size="icon"
