@@ -14,10 +14,7 @@ import AdminLogin from "./pages/auth/AdminLogin";
 import ClientDashboard from "./pages/client/ClientDashboard";
 import ClientLeads from "./pages/client/ClientLeads";
 import ClientCalls from "./pages/client/ClientCalls";
-import ClientBatches from "./pages/client/ClientBatches";
-import CreateBatchCampaign from "./pages/client/CreateBatchCampaign";
 import ClientPhoneNumbers from "./pages/client/ClientPhoneNumbers";
-import BatchAnalytics from "./pages/client/BatchAnalytics";
 import ClientAgents from "./pages/client/ClientAgents";
 import ClientBilling from "./pages/client/ClientBilling";
 import ClientSettings from "./pages/client/ClientSettings";
@@ -37,7 +34,6 @@ import AdminCalls from "./pages/admin/AdminCalls";
 import AdminTasks from "./pages/admin/AdminTasks";
 import AdminPhoneNumbers from "./pages/admin/AdminPhoneNumbers";
 import AdminRealTimeMonitor from "./pages/admin/AdminRealTimeMonitor";
-import BatchCallHistory from "./pages/admin/BatchCallHistory";
 import AdminClients from "./pages/admin/AdminClients";
 import AdminEngineers from "./pages/admin/AdminEngineers";
 import AdminDemoLogs from "./pages/admin/AdminDemoLogs";
@@ -96,22 +92,6 @@ const App = () => (
               }
             />
             <Route
-              path="/admin/batches"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <ClientBatches />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/batch-analytics"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <BatchAnalytics />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/admin/phone-numbers"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
@@ -124,14 +104,6 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <AdminRealTimeMonitor />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/call-history"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <BatchCallHistory />
                 </ProtectedRoute>
               }
             />
@@ -319,30 +291,6 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["client"]}>
                   <ClientCalls />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/client/batches"
-              element={
-                <ProtectedRoute allowedRoles={["client", "admin"]}>
-                  <ClientBatches />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/client/batches/create"
-              element={
-                <ProtectedRoute allowedRoles={["client", "admin"]}>
-                  <CreateBatchCampaign />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/client/batch-analytics"
-              element={
-                <ProtectedRoute allowedRoles={["client", "admin"]}>
-                  <BatchAnalytics />
                 </ProtectedRoute>
               }
             />
