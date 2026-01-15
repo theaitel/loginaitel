@@ -4,9 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Phone, Clock, CheckCircle, XCircle, PhoneOff, Loader2, Play } from "lucide-react";
+import { Phone, Clock, CheckCircle, XCircle, PhoneOff, Loader2, Play, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { RECallTranscriptDialog } from "./RECallTranscriptDialog";
 
 interface Lead {
   id: string;
@@ -32,11 +33,13 @@ interface CallHistoryItem {
   created_at: string;
   summary: string | null;
   sentiment: string | null;
+  transcript: string | null;
   recording_url: string | null;
   real_estate_calls?: {
     disposition: string | null;
     interest_score: number | null;
     ai_summary: string | null;
+    objections_detected: string[] | null;
   }[];
 }
 
@@ -69,6 +72,8 @@ const statusConfig: Record<string, { icon: typeof CheckCircle; color: string; la
 export function RELeadDetailsDialog({ open, onOpenChange, lead }: Props) {
   const [callHistory, setCallHistory] = useState<CallHistoryItem[]>([]);
   const [loadingCalls, setLoadingCalls] = useState(false);
+  const [selectedCall, setSelectedCall] = useState<CallHistoryItem | null>(null);
+  const [transcriptDialogOpen, setTranscriptDialogOpen] = useState(false);
 
   useEffect(() => {
     if (open && lead?.id) {
@@ -91,11 +96,13 @@ export function RELeadDetailsDialog({ open, onOpenChange, lead }: Props) {
           created_at,
           summary,
           sentiment,
+          transcript,
           recording_url,
           real_estate_calls (
             disposition,
             interest_score,
-            ai_summary
+            ai_summary,
+            objections_detected
           )
         `)
         .eq("lead_id", lead.id)
@@ -209,9 +216,13 @@ export function RELeadDetailsDialog({ open, onOpenChange, lead }: Props) {
                     const reCall = call.real_estate_calls?.[0];
 
                     return (
-                      <div
+                      <button
                         key={call.id}
-                        className="p-3 border rounded-lg hover:bg-muted/30 transition-colors"
+                        onClick={() => {
+                          setSelectedCall(call);
+                          setTranscriptDialogOpen(true);
+                        }}
+                        className="w-full text-left p-3 border rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"
                       >
                         <div className="flex items-start gap-3">
                           <div className={`mt-0.5 ${config.color}`}>
@@ -236,6 +247,12 @@ export function RELeadDetailsDialog({ open, onOpenChange, lead }: Props) {
                                   Interest: {reCall.interest_score}%
                                 </Badge>
                               )}
+                              {call.transcript && (
+                                <Badge variant="outline" className="text-xs ml-auto">
+                                  <FileText className="h-3 w-3 mr-1" />
+                                  Transcript
+                                </Badge>
+                              )}
                             </div>
 
                             <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
@@ -250,15 +267,10 @@ export function RELeadDetailsDialog({ open, onOpenChange, lead }: Props) {
                                 }
                               </span>
                               {call.recording_url && (
-                                <a 
-                                  href={call.recording_url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-primary hover:underline"
-                                >
+                                <span className="flex items-center gap-1 text-primary">
                                   <Play className="h-3 w-3" />
                                   Recording
-                                </a>
+                                </span>
                               )}
                             </div>
 
@@ -275,7 +287,7 @@ export function RELeadDetailsDialog({ open, onOpenChange, lead }: Props) {
                             )}
                           </div>
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -288,6 +300,12 @@ export function RELeadDetailsDialog({ open, onOpenChange, lead }: Props) {
           </div>
         </ScrollArea>
       </DialogContent>
+
+      <RECallTranscriptDialog
+        open={transcriptDialogOpen}
+        onOpenChange={setTranscriptDialogOpen}
+        call={selectedCall}
+      />
     </Dialog>
   );
 }
