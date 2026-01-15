@@ -49,10 +49,12 @@ serve(async (req) => {
     }
 
     // Create Razorpay order
+    // Receipt must be max 40 chars - use short format
+    const receiptId = `cr_${Date.now().toString(36)}`;
     const orderData = {
       amount: amount * 100, // Convert to paise
       currency: "INR",
-      receipt: `credit_${user.id}_${Date.now()}`,
+      receipt: receiptId,
       notes: {
         client_id: user.id,
         credits: credits.toString(),
