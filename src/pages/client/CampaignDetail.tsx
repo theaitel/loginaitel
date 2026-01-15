@@ -29,16 +29,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { BulkCallDialog } from "@/components/campaigns/BulkCallDialog";
 import {
   Plus,
   Upload,
   Play,
-  Pause,
   ArrowLeft,
   Phone,
   Users,
@@ -50,10 +49,9 @@ import {
   Link as LinkIcon,
   FileSpreadsheet,
   History,
-  CheckCircle,
-  Edit,
   Trash2,
   BookOpen,
+  PhoneCall,
 } from "lucide-react";
 
 interface CampaignLead {
@@ -92,6 +90,7 @@ export default function CampaignDetail() {
 
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [isBulkCallOpen, setIsBulkCallOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const [newLead, setNewLead] = useState({ name: "", phone_number: "", email: "" });
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
@@ -398,12 +397,22 @@ export default function CampaignDetail() {
           </Button>
 
           {selectedLeads.length > 0 && (
-            <Button variant="default">
-              <Play className="h-4 w-4 mr-2" />
+            <Button variant="default" onClick={() => setIsBulkCallOpen(true)}>
+              <PhoneCall className="h-4 w-4 mr-2" />
               Call Selected ({selectedLeads.length})
             </Button>
           )}
         </div>
+
+        {/* Bulk Call Dialog */}
+        <BulkCallDialog
+          open={isBulkCallOpen}
+          onOpenChange={setIsBulkCallOpen}
+          campaignId={campaignId!}
+          agentId={campaign?.agent_id || null}
+          selectedLeadIds={selectedLeads}
+          concurrencyLevel={campaign?.concurrency_level || 5}
+        />
 
         {/* Leads Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
