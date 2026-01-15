@@ -122,6 +122,86 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_call_queue: {
+        Row: {
+          agent_id: string | null
+          call_id: string | null
+          campaign_id: string
+          client_id: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          lead_id: string
+          priority: number
+          queued_at: string
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id?: string | null
+          call_id?: string | null
+          campaign_id: string
+          client_id: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lead_id: string
+          priority?: number
+          queued_at?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string | null
+          call_id?: string | null
+          campaign_id?: string
+          client_id?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lead_id?: string
+          priority?: number
+          queued_at?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_call_queue_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "aitel_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_call_queue_call_id_fkey"
+            columns: ["call_id"]
+            isOneToOne: false
+            referencedRelation: "calls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_call_queue_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_call_queue_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_leads: {
         Row: {
           call_duration: number | null
