@@ -45,10 +45,6 @@ interface LiveCall {
   sentiment: string | null;
   metadata: unknown;
   external_call_id: string | null;
-  lead?: {
-    name: string | null;
-    phone_number_masked: string | null;
-  };
 }
 
 interface RealtimePayload {
@@ -104,12 +100,7 @@ export default function AdminRealTimeMonitor() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("calls")
-        .select(
-          `
-          *,
-          lead:leads_admin_view(name, phone_number_masked)
-        `
-        )
+        .select("*")
         .in("status", ["initiated", "in_progress"])
         .order("created_at", { ascending: false });
 
@@ -405,10 +396,10 @@ export default function AdminRealTimeMonitor() {
                         <div className="flex items-start justify-between mb-2">
                           <div>
                             <p className="font-medium">
-                              {call.lead?.name || "Unknown Lead"}
+                              Call #{call.id.slice(0, 8)}
                             </p>
-                            <p className="text-xs text-muted-foreground font-mono">
-                              {call.lead?.phone_number_masked}
+                            <p className="text-xs text-muted-foreground">
+                              Client: {getClientName(call.client_id)}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
@@ -526,10 +517,7 @@ export default function AdminRealTimeMonitor() {
                           </div>
                         </div>
                         <p className="text-sm">
-                          Call to{" "}
-                          <span className="font-medium">
-                            {event.call.lead?.name || "Unknown"}
-                          </span>
+                          Call #{event.call.id.slice(0, 8)}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           Client: {getClientName(event.call.client_id)}
@@ -558,12 +546,7 @@ export default function AdminRealTimeMonitor() {
             selectedCall
               ? {
                   ...selectedCall,
-                  lead: selectedCall.lead
-                    ? {
-                        name: selectedCall.lead.name,
-                        phone_number: selectedCall.lead.phone_number_masked || "",
-                      }
-                    : undefined,
+                  lead: undefined,
                 }
               : null
           }

@@ -349,7 +349,9 @@ export async function stopAitelAgent(agentId: string): Promise<AitelResponse<Sto
 // ==========================================
 
 export interface MakeCallRequest {
-  lead_id: string;
+  lead_id?: string;
+  phone_number?: string;
+  name?: string;
   agent_id: string;
   client_id: string;
   from_phone_number?: string;

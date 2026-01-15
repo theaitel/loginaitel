@@ -82,8 +82,8 @@ export default function ClientDashboard() {
           connected,
           created_at,
           sentiment,
-          lead:leads(name, phone_number),
-          agent_id
+          agent_id,
+          metadata
         `)
         .eq("client_id", user!.id)
         .order("created_at", { ascending: false })
@@ -266,9 +266,7 @@ export default function ClientDashboard() {
                       </div>
                       <div>
                         <p className="font-mono text-sm">
-                          {call.lead?.phone_number 
-                            ? call.lead.phone_number.replace(/(\d{3})(\d{3})(\d+)/, "+$1 $2 XXXXX")
-                            : "Unknown"}
+                          Call #{call.id.slice(0, 8)}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {getAgentName(call.agent_id)} • {formatDuration(call.duration_seconds)}
