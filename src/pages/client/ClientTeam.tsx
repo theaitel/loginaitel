@@ -317,16 +317,7 @@ export default function ClientTeam() {
   return (
     <DashboardLayout role="client">
       <div className="space-y-6">
-        {/* Subscription/Trial Status */}
-        {(needsSubscription || needsAutopay) && (
-          <SubUserPaywall 
-            currentSeats={subUsers?.length || 0}
-            onPurchaseComplete={handleSubscriptionChange}
-            onTrialStart={handleSubscriptionChange}
-          />
-        )}
-
-        {/* Header */}
+        {/* Page Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -335,139 +326,159 @@ export default function ClientTeam() {
             </h1>
             <p className="text-muted-foreground mt-1">
               Add sub-users with their phone numbers. They can login using OTP.
-              {stats.total > 0 && (
-                <span className="ml-2 text-primary font-medium">
-              (₹{(seatSubscription?.seats_count || 0) * SEAT_PRICE}/month)
-            </span>
-          )}
-          {seatSubscription?.is_trial && !trialExpired && (
-            <Badge variant="outline" className="ml-2 border-primary text-primary">
-              Trial Active
-            </Badge>
-          )}
-        </p>
-      </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-          if (open && !canAddMembers) {
-            if (needsSubscription) {
-              toast({
-                title: "Start Free Trial",
-                description: "Start your 7-day free trial to add team members.",
-                variant: "destructive",
-              });
-            } else if (needsAutopay) {
-              toast({
-                title: "Autopay Required",
-                description: "Please set up autopay to continue adding team members.",
-                variant: "destructive",
-              });
-            } else {
-              toast({
-                title: "Seat Limit Reached",
-                description: "Purchase more seats to add team members.",
-                variant: "destructive",
-              });
-            }
-            return;
-          }
-          setIsAddDialogOpen(open);
-        }}>
-            <DialogTrigger asChild>
-              <Button disabled={!canAddMembers}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Add Team Member
-                {!canAddMembers && <Lock className="h-3 w-3 ml-2" />}
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add Team Member</DialogTitle>
-                <DialogDescription>
-                  Add a team member by their phone number. They can login using the Client Login with OTP.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number *</Label>
-                  <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-muted-foreground">
-                      <Phone className="h-4 w-4" />
-                      <span className="text-sm">+91</span>
+              {seatSubscription?.autopay_enabled && (
+                <span className="ml-2 font-medium">
+                  • ₹{(seatSubscription?.seats_count || 0) * SEAT_PRICE}/month
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            {seatSubscription && !needsSubscription && (
+              <Badge 
+                variant={seatSubscription.is_trial && !trialExpired ? "outline" : "default"}
+                className={seatSubscription.autopay_enabled ? "bg-green-500" : trialExpired ? "bg-destructive" : "border-primary text-primary"}
+              >
+                {seatSubscription.autopay_enabled ? (
+                  <><CheckCircle className="h-3 w-3 mr-1" />Autopay Active</>
+                ) : seatSubscription.is_trial && !trialExpired ? (
+                  <><Clock className="h-3 w-3 mr-1" />Trial Active</>
+                ) : (
+                  <><Lock className="h-3 w-3 mr-1" />Trial Expired</>
+                )}
+              </Badge>
+            )}
+            <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+              if (open && !canAddMembers) {
+                if (needsSubscription) {
+                  toast({
+                    title: "Start Free Trial",
+                    description: "Start your 7-day free trial to add team members.",
+                    variant: "destructive",
+                  });
+                } else if (needsAutopay) {
+                  toast({
+                    title: "Autopay Required",
+                    description: "Please set up autopay to continue adding team members.",
+                    variant: "destructive",
+                  });
+                } else {
+                  toast({
+                    title: "Seat Limit Reached",
+                    description: "Purchase more seats to add team members.",
+                    variant: "destructive",
+                  });
+                }
+                return;
+              }
+              setIsAddDialogOpen(open);
+            }}>
+              <DialogTrigger asChild>
+                <Button disabled={!canAddMembers}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Add Team Member
+                  {!canAddMembers && <Lock className="h-3 w-3 ml-2" />}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Team Member</DialogTitle>
+                  <DialogDescription>
+                    Add a team member by their phone number. They can login using the Client Login with OTP.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number *</Label>
+                    <div className="relative">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-muted-foreground">
+                        <Phone className="h-4 w-4" />
+                        <span className="text-sm">+91</span>
+                      </div>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="9876543210"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: formatDisplayPhone(e.target.value) })}
+                        className="pl-20"
+                        maxLength={10}
+                      />
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      They will use this number to login via OTP
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Full Name</Label>
                     <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="9876543210"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: formatDisplayPhone(e.target.value) })}
-                      className="pl-20"
-                      maxLength={10}
+                      id="name"
+                      placeholder="John Doe"
+                      value={formData.full_name}
+                      onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    They will use this number to login via OTP
-                  </p>
+                  <div className="space-y-2">
+                    <Label htmlFor="role">Role *</Label>
+                    <Select
+                      value={formData.role}
+                      onValueChange={(value: "monitoring" | "telecaller" | "lead_manager") =>
+                        setFormData({ ...formData, role: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(roleLabels).map(([key, value]) => (
+                          <SelectItem key={key} value={key}>
+                            <div className="flex items-center gap-2">
+                              {value.icon}
+                              <span>{value.label}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {roleLabels[formData.role]?.description}
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    placeholder="John Doe"
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role *</Label>
-                  <Select
-                    value={formData.role}
-                    onValueChange={(value: "monitoring" | "telecaller" | "lead_manager") =>
-                      setFormData({ ...formData, role: value })
-                    }
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => addSubUser.mutate(formData)}
+                    disabled={formData.phone.length !== 10 || addSubUser.isPending}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(roleLabels).map(([key, value]) => (
-                        <SelectItem key={key} value={key}>
-                          <div className="flex items-center gap-2">
-                            {value.icon}
-                            <span>{value.label}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    {roleLabels[formData.role]?.description}
-                  </p>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => addSubUser.mutate(formData)}
-                  disabled={formData.phone.length !== 10 || addSubUser.isPending}
-                >
-                  {addSubUser.isPending ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Adding...
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Add Member
-                    </>
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                    {addSubUser.isPending ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Add Member
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
+
+        {/* Subscription/Trial Card - Show when needed */}
+        {(needsSubscription || needsAutopay) && (
+          <SubUserPaywall 
+            currentSeats={subUsers?.length || 0}
+            onPurchaseComplete={handleSubscriptionChange}
+            onTrialStart={handleSubscriptionChange}
+          />
+        )}
 
         {/* Tabs for Team Members and Activity Dashboard */}
         <Tabs defaultValue="members" className="space-y-6">
