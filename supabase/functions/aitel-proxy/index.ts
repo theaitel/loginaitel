@@ -33,15 +33,24 @@ function maskPhone(phone: string | null | undefined): string {
   return "*".repeat(phone.length - 4) + phone.slice(-4);
 }
 
+// Check if value is already encoded (starts with "enc:")
+function isAlreadyEncoded(value: string | null | undefined): boolean {
+  return typeof value === 'string' && value.startsWith('enc:');
+}
+
 // Encode transcript for transport - will be decoded in frontend for display
+// Skip if already encoded (Bolna API may return encoded data)
 function encodeTranscript(transcript: string | null | undefined): string | null {
   if (!transcript) return null;
+  if (isAlreadyEncoded(transcript)) return transcript;
   return encodeForTransport(transcript);
 }
 
 // Encode summary for transport
+// Skip if already encoded
 function encodeSummary(summary: string | null | undefined): string | null {
   if (!summary) return null;
+  if (isAlreadyEncoded(summary)) return summary;
   return encodeForTransport(summary);
 }
 
@@ -102,17 +111,18 @@ function maskExecutionData(execution: Record<string, unknown>, includeRealRecord
     masked.summary = encodeSummary(execution.summary as string);
   }
   
-  // Encode extracted_data if present
+  // Encode extracted_data if present (skip if already encoded)
   if (execution.extracted_data) {
     const extractedStr = typeof execution.extracted_data === 'string' 
       ? execution.extracted_data 
       : JSON.stringify(execution.extracted_data);
-    masked.extracted_data = encodeForTransport(extractedStr);
+    masked.extracted_data = isAlreadyEncoded(extractedStr) ? extractedStr : encodeForTransport(extractedStr);
   }
   
-  // Encode notes if present
+  // Encode notes if present (skip if already encoded)
   if (execution.notes) {
-    masked.notes = encodeForTransport(execution.notes as string);
+    const notesStr = execution.notes as string;
+    masked.notes = isAlreadyEncoded(notesStr) ? notesStr : encodeForTransport(notesStr);
   }
   
   // Remove sensitive execution-level fields
