@@ -26,7 +26,10 @@ import {
   Upload,
   Loader2,
   Music,
+  Lock,
 } from "lucide-react";
+import { useDecryptedContent } from "@/hooks/useDecryptedContent";
+import { isEncryptedPayload } from "@/lib/secure-decrypt";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -131,6 +134,21 @@ export function DemoCallPreviewModal({
       audioRef.current.currentTime = time;
     }
   };
+
+  // Secure decryption for transcript - must be called before early return
+  const rawTranscript = call?.transcript;
+  const isTranscriptEncrypted = isEncryptedPayload(rawTranscript);
+  
+  const { 
+    data: decryptedTranscript, 
+    isLoading: isDecryptingTranscript 
+  } = useDecryptedContent({
+    field: rawTranscript,
+    resourceId: call?.id || "",
+    resourceType: "demo_call",
+    fieldType: "transcript",
+    enabled: open && !!rawTranscript && !!call,
+  });
 
   const handleUploadAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -392,11 +410,23 @@ export function DemoCallPreviewModal({
               <h4 className="font-medium flex items-center gap-2">
                 <FileText className="h-4 w-4" />
                 Transcript
+                {isTranscriptEncrypted && (
+                  <span title="Encrypted content">
+                    <Lock className="h-3 w-3 text-chart-2" />
+                  </span>
+                )}
               </h4>
-              {call.transcript ? (
+              {isDecryptingTranscript ? (
+                <div className="h-32 border-2 border-border bg-muted/30 flex items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
+                    <p>Decrypting transcript...</p>
+                  </div>
+                </div>
+              ) : decryptedTranscript ? (
                 <div className="border-2 border-border bg-muted/30 p-3 max-h-48 overflow-y-auto">
                   <pre className="whitespace-pre-wrap text-sm font-mono leading-relaxed">
-                    {call.transcript}
+                    {decryptedTranscript}
                   </pre>
                 </div>
               ) : (
