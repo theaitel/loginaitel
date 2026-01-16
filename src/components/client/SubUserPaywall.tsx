@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -10,10 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { 
   Users, 
-  Lock, 
   CheckCircle,
-  IndianRupee,
-  Calendar,
   CreditCard,
   Loader2,
   Plus,
@@ -21,19 +18,20 @@ import {
   Gift,
   Clock,
   AlertTriangle,
-  Zap
+  Zap,
+  Calendar,
+  Shield
 } from "lucide-react";
 import { format, differenceInDays, differenceInHours } from "date-fns";
 import { toast } from "sonner";
 
 interface SubUserPaywallProps {
   currentSeats: number;
-  maxFreeSeats?: number;
   onPurchaseComplete?: () => void;
   onTrialStart?: () => void;
 }
 
-const SEAT_PRICE = 300; // ₹300 per seat per month
+const SEAT_PRICE = 300;
 const TRIAL_DAYS = 7;
 const TRIAL_SEATS = 10;
 
@@ -60,28 +58,13 @@ interface SeatSubscription {
   updated_at: string;
 }
 
-interface SeatPayment {
-  id: string;
-  client_id: string;
-  seats_count: number;
-  amount: number;
-  razorpay_order_id: string;
-  razorpay_payment_id: string | null;
-  status: string;
-  billing_period_start: string | null;
-  billing_period_end: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export function SubUserPaywall({ currentSeats, maxFreeSeats = 0, onPurchaseComplete, onTrialStart }: SubUserPaywallProps) {
+export function SubUserPaywall({ currentSeats, onPurchaseComplete, onTrialStart }: SubUserPaywallProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [seatsToBuy, setSeatsToBuy] = useState(1);
+  const [seatsToBuy, setSeatsToBuy] = useState(Math.max(1, currentSeats));
   const [isLoading, setIsLoading] = useState(false);
   const [isStartingTrial, setIsStartingTrial] = useState(false);
 
-  // Fetch seat subscription data
   const { data: subscription, isLoading: loadingSubscription, refetch } = useQuery({
     queryKey: ["seat-subscription", user?.id],
     enabled: !!user?.id,
@@ -97,45 +80,14 @@ export function SubUserPaywall({ currentSeats, maxFreeSeats = 0, onPurchaseCompl
     },
   });
 
-  // Fetch seat payment history
-  const { data: paymentHistory } = useQuery({
-    queryKey: ["seat-payments", user?.id],
-    enabled: !!user?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("seat_payments" as any)
-        .select("*")
-        .eq("client_id", user!.id)
-        .eq("status", "completed")
-        .order("created_at", { ascending: false })
-        .limit(5);
-      
-      if (error) throw error;
-      return data as unknown as SeatPayment[];
-    },
-  });
-
-  // Compute trial status
   const isOnTrial = subscription?.is_trial === true;
-  const hasUsedTrial = subscription?.trial_started_at !== null;
   const trialEndsAt = subscription?.trial_ends_at ? new Date(subscription.trial_ends_at) : null;
   const now = new Date();
   const trialExpired = trialEndsAt ? now >= trialEndsAt : false;
   const trialDaysRemaining = trialEndsAt ? Math.max(0, differenceInDays(trialEndsAt, now)) : 0;
   const trialHoursRemaining = trialEndsAt ? Math.max(0, differenceInHours(trialEndsAt, now)) : 0;
   const autopayEnabled = subscription?.autopay_enabled === true;
-  
   const paidSeats = subscription?.seats_count || 0;
-  const effectiveSeats = isOnTrial && !trialExpired ? TRIAL_SEATS : (autopayEnabled ? paidSeats : 0);
-  const canAddMore = currentSeats < effectiveSeats;
-
-  // Check if client can create sub-users
-  const canCreateSubUsers = () => {
-    if (!subscription) return false; // No subscription = no trial started
-    if (isOnTrial && !trialExpired) return true; // Active trial
-    if (autopayEnabled && paidSeats > 0) return true; // Autopay enabled with paid seats
-    return false;
-  };
 
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -159,17 +111,15 @@ export function SubUserPaywall({ currentSeats, maxFreeSeats = 0, onPurchaseCompl
       if (error) throw error;
       
       if (data.success) {
-        toast.success("🎉 7-day free trial started!", {
-          description: `You can now add up to ${TRIAL_SEATS} team members. Trial expires on ${format(new Date(data.trialEndsAt), "MMM dd, yyyy")}.`
+        toast.success("🎉 Free trial started!", {
+          description: `Add up to ${TRIAL_SEATS} team members for ${TRIAL_DAYS} days free.`
         });
         refetch();
         queryClient.invalidateQueries({ queryKey: ["seat-subscription"] });
         queryClient.invalidateQueries({ queryKey: ["client-sub-users"] });
         onTrialStart?.();
       } else if (data.error === "trial_expired") {
-        toast.error("Trial has expired", {
-          description: "Please set up autopay to continue using team features."
-        });
+        toast.error("Trial expired. Set up autopay to continue.");
       } else {
         throw new Error(data.message || "Failed to start trial");
       }
@@ -183,7 +133,7 @@ export function SubUserPaywall({ currentSeats, maxFreeSeats = 0, onPurchaseCompl
 
   const handleSetupAutopay = async () => {
     if (seatsToBuy < 1) {
-      toast.error("Please select at least 1 seat");
+      toast.error("Select at least 1 seat");
       return;
     }
 
@@ -191,38 +141,28 @@ export function SubUserPaywall({ currentSeats, maxFreeSeats = 0, onPurchaseCompl
 
     try {
       const scriptLoaded = await loadRazorpayScript();
-      if (!scriptLoaded) {
-        throw new Error("Failed to load payment gateway");
-      }
+      if (!scriptLoaded) throw new Error("Failed to load payment gateway");
 
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("Please login to continue");
-      }
+      if (!session) throw new Error("Please login to continue");
 
-      // Create autopay order
       const { data: orderData, error: orderError } = await supabase.functions.invoke(
         "setup-seat-autopay",
-        {
-          body: { seats: seatsToBuy },
-        }
+        { body: { seats: seatsToBuy } }
       );
 
-      if (orderError || !orderData) {
-        throw new Error(orderError?.message || "Failed to create order");
-      }
+      if (orderError || !orderData) throw new Error(orderError?.message || "Failed to create order");
 
-      // Initialize Razorpay
       const options = {
         key: orderData.keyId,
         amount: orderData.amount,
         currency: orderData.currency,
-        name: "Aitel Team Seats - Autopay Setup",
-        description: `${seatsToBuy} seat(s) × ₹${SEAT_PRICE}/month - Monthly autopay`,
+        name: "Aitel Team Seats",
+        description: `${seatsToBuy} seat(s) × ₹${SEAT_PRICE}/month`,
         order_id: orderData.orderId,
         handler: async (response: any) => {
           try {
-            const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
+            const { error: verifyError } = await supabase.functions.invoke(
               "razorpay-verify-seat-payment",
               {
                 body: {
@@ -235,35 +175,24 @@ export function SubUserPaywall({ currentSeats, maxFreeSeats = 0, onPurchaseCompl
               }
             );
 
-            if (verifyError) {
-              throw new Error(verifyError.message);
-            }
+            if (verifyError) throw new Error(verifyError.message);
 
-            toast.success(`✅ Autopay setup complete!`, {
-              description: `${seatsToBuy} seat(s) activated. You can now create team members.`
+            toast.success("Autopay activated!", {
+              description: `${seatsToBuy} seat(s) ready. You can now add team members.`
             });
             refetch();
             queryClient.invalidateQueries({ queryKey: ["seat-subscription"] });
             queryClient.invalidateQueries({ queryKey: ["seat-payments"] });
             queryClient.invalidateQueries({ queryKey: ["client-sub-users"] });
             onPurchaseComplete?.();
-            setSeatsToBuy(1);
           } catch (err: any) {
             console.error("Payment verification failed:", err);
-            toast.error("Payment verification failed. Please contact support.");
+            toast.error("Payment verification failed. Contact support.");
           }
         },
-        prefill: {
-          email: session.user.email,
-        },
-        theme: {
-          color: "#000000",
-        },
-        modal: {
-          ondismiss: () => {
-            setIsLoading(false);
-          },
-        },
+        prefill: { email: session.user.email },
+        theme: { color: "#000000" },
+        modal: { ondismiss: () => setIsLoading(false) },
       };
 
       const razorpay = new window.Razorpay(options);
@@ -278,82 +207,75 @@ export function SubUserPaywall({ currentSeats, maxFreeSeats = 0, onPurchaseCompl
 
   if (loadingSubscription) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   const totalAmount = seatsToBuy * SEAT_PRICE;
 
-  // Show trial start card if no subscription
+  // No subscription - Show trial start
   if (!subscription) {
     return (
-      <Card className="border-2 border-primary/50 bg-gradient-to-br from-primary/5 to-primary/10">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Gift className="h-5 w-5 text-primary" />
-            Start Your Free Trial
-          </CardTitle>
-          <CardDescription>
-            Try team features free for {TRIAL_DAYS} days
-          </CardDescription>
+      <Card className="border-2 border-primary">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Gift className="h-5 w-5 text-primary" />
+              Start Your Free Trial
+            </CardTitle>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Try team management features free for {TRIAL_DAYS} days
+          </p>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <div className="grid grid-cols-3 gap-4">
-            <div className="p-3 bg-background border-2 border-border text-center">
-              <Clock className="h-5 w-5 mx-auto mb-1 text-primary" />
-              <p className="text-2xl font-bold">{TRIAL_DAYS}</p>
-              <p className="text-xs text-muted-foreground">Days Free</p>
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <div className="text-3xl font-bold text-primary">{TRIAL_DAYS}</div>
+              <div className="text-xs text-muted-foreground mt-1">Days Free</div>
             </div>
-            <div className="p-3 bg-background border-2 border-border text-center">
-              <Users className="h-5 w-5 mx-auto mb-1 text-primary" />
-              <p className="text-2xl font-bold">{TRIAL_SEATS}</p>
-              <p className="text-xs text-muted-foreground">Team Members</p>
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <div className="text-3xl font-bold">{TRIAL_SEATS}</div>
+              <div className="text-xs text-muted-foreground mt-1">Team Members</div>
             </div>
-            <div className="p-3 bg-background border-2 border-border text-center">
-              <CreditCard className="h-5 w-5 mx-auto mb-1 text-green-500" />
-              <p className="text-sm font-bold text-green-500">No Card</p>
-              <p className="text-xs text-muted-foreground">Required</p>
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <div className="text-3xl font-bold text-green-600">₹0</div>
+              <div className="text-xs text-muted-foreground mt-1">No Card Needed</div>
             </div>
           </div>
 
-          <div className="p-4 bg-primary/10 border-2 border-primary/30">
-            <h4 className="font-semibold mb-2">What's included in trial:</h4>
-            <ul className="text-sm space-y-1 text-muted-foreground">
-              <li>• Add up to {TRIAL_SEATS} team members</li>
-              <li>• All roles: Telecaller, Lead Manager, Monitoring</li>
-              <li>• Full access to team features</li>
-              <li>• No credit card required to start</li>
-            </ul>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-500" />
+              <span>Add up to {TRIAL_SEATS} team members</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-500" />
+              <span>All roles: Telecaller, Lead Manager, Monitoring</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-500" />
+              <span>No payment required to start</span>
+            </div>
           </div>
 
-          <div className="p-3 bg-amber-100 dark:bg-amber-900/30 border-2 border-amber-500/50 text-sm">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
-              <p className="text-amber-800 dark:text-amber-200">
-                After trial, set up autopay (₹{SEAT_PRICE}/seat/month) to continue using team features.
-              </p>
-            </div>
+          <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg text-sm text-amber-700 dark:text-amber-300">
+            <AlertTriangle className="h-4 w-4 inline mr-2" />
+            After trial, set up autopay (₹{SEAT_PRICE}/seat/month) to continue.
           </div>
         </CardContent>
         <CardFooter>
           <Button 
             onClick={handleStartTrial} 
-            className="w-full" 
-            size="lg"
+            className="w-full h-12 text-base" 
             disabled={isStartingTrial}
           >
             {isStartingTrial ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Starting Trial...
-              </>
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Starting...</>
             ) : (
-              <>
-                <Gift className="h-4 w-4 mr-2" />
-                Start {TRIAL_DAYS}-Day Free Trial
-              </>
+              <><Gift className="h-4 w-4 mr-2" />Start {TRIAL_DAYS}-Day Free Trial</>
             )}
           </Button>
         </CardFooter>
@@ -361,51 +283,44 @@ export function SubUserPaywall({ currentSeats, maxFreeSeats = 0, onPurchaseCompl
     );
   }
 
-  // Show trial active / expired state
-  if (isOnTrial || (hasUsedTrial && !autopayEnabled)) {
+  // Active trial or expired trial without autopay
+  if (isOnTrial || (subscription.trial_started_at && !autopayEnabled)) {
     const trialProgress = trialEndsAt 
-      ? Math.max(0, Math.min(100, ((TRIAL_DAYS - trialDaysRemaining) / TRIAL_DAYS) * 100))
+      ? Math.min(100, Math.max(0, ((TRIAL_DAYS - trialDaysRemaining) / TRIAL_DAYS) * 100))
       : 0;
 
     return (
-      <Card className={trialExpired ? "border-2 border-destructive/50 bg-destructive/5" : "border-2 border-primary/50"}>
-        <CardHeader>
+      <Card className={trialExpired ? "border-2 border-destructive" : "border border-border"}>
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-xl">
                 {trialExpired ? (
-                  <>
-                    <AlertTriangle className="h-5 w-5 text-destructive" />
-                    Trial Expired
-                  </>
+                  <><AlertTriangle className="h-5 w-5 text-destructive" />Trial Expired</>
                 ) : (
-                  <>
-                    <Gift className="h-5 w-5 text-primary" />
-                    Free Trial Active
-                  </>
+                  <><Clock className="h-5 w-5 text-primary" />Free Trial Active</>
                 )}
               </CardTitle>
-              <CardDescription>
+              <p className="text-sm text-muted-foreground mt-1">
                 {trialExpired 
                   ? "Set up autopay to continue using team features"
                   : `${trialDaysRemaining} days remaining (${trialHoursRemaining}h)`
                 }
-              </CardDescription>
+              </p>
             </div>
             {!trialExpired && (
-              <Badge variant="default" className="bg-primary">
-                <Clock className="h-3 w-3 mr-1" />
-                Trial
+              <Badge variant="outline" className="border-primary text-primary">
+                <Clock className="h-3 w-3 mr-1" />Trial
               </Badge>
             )}
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           {/* Trial Progress */}
           {!trialExpired && trialEndsAt && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Trial Progress</span>
+                <span className="text-muted-foreground">Trial Progress</span>
                 <span className="font-medium">{trialDaysRemaining} days left</span>
               </div>
               <Progress value={trialProgress} className="h-2" />
@@ -415,106 +330,106 @@ export function SubUserPaywall({ currentSeats, maxFreeSeats = 0, onPurchaseCompl
             </div>
           )}
 
-          {/* Current usage */}
+          {/* Seat Usage */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-3 bg-muted/50 border-2 border-border text-center">
-              <p className="text-2xl font-bold">{currentSeats}</p>
-              <p className="text-xs text-muted-foreground">Current Members</p>
+            <div className="text-center p-4 bg-muted/50 rounded-lg border">
+              <div className="text-3xl font-bold">{currentSeats}</div>
+              <div className="text-xs text-muted-foreground mt-1">Current Members</div>
             </div>
-            <div className="p-3 bg-muted/50 border-2 border-border text-center">
-              <p className="text-2xl font-bold">{trialExpired ? 0 : TRIAL_SEATS}</p>
-              <p className="text-xs text-muted-foreground">Available Seats</p>
+            <div className="text-center p-4 bg-muted/50 rounded-lg border">
+              <div className="text-3xl font-bold">{trialExpired ? 0 : TRIAL_SEATS}</div>
+              <div className="text-xs text-muted-foreground mt-1">Available Seats</div>
             </div>
           </div>
 
-          {/* Expired warning */}
+          {/* Expired Warning */}
           {trialExpired && (
-            <div className="p-4 bg-destructive/10 border-2 border-destructive/30">
+            <div className="p-4 bg-destructive/10 rounded-lg">
               <div className="flex items-start gap-3">
-                <Lock className="h-5 w-5 text-destructive mt-0.5" />
+                <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-destructive">
-                    Team Features Locked
-                  </p>
+                  <p className="font-medium text-destructive">Team Features Locked</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Your {TRIAL_DAYS}-day trial has ended. Set up autopay to unlock team features and continue using your team members.
+                    Your trial has ended. Set up autopay to unlock team features.
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Autopay Setup Section */}
-          <div className="p-4 bg-primary/5 border-2 border-primary/30 space-y-4">
+          {/* Autopay Setup */}
+          <div className="p-4 bg-muted/30 rounded-lg border space-y-4">
             <h4 className="font-semibold flex items-center gap-2">
               <Zap className="h-4 w-4 text-primary" />
               {trialExpired ? "Set Up Autopay to Continue" : "Set Up Autopay Now"}
             </h4>
             
             <div className="flex items-center gap-4">
-              <Label htmlFor="seats" className="whitespace-nowrap">Number of Seats:</Label>
+              <Label className="whitespace-nowrap text-sm">Seats:</Label>
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="icon"
+                  className="h-9 w-9"
                   onClick={() => setSeatsToBuy(Math.max(1, seatsToBuy - 1))}
                   disabled={seatsToBuy <= 1}
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
                 <Input
-                  id="seats"
                   type="number"
                   min={1}
                   max={100}
                   value={seatsToBuy}
                   onChange={(e) => setSeatsToBuy(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-20 text-center"
+                  className="w-16 text-center h-9"
                 />
                 <Button
                   type="button"
                   variant="outline"
                   size="icon"
+                  className="h-9 w-9"
                   onClick={() => setSeatsToBuy(seatsToBuy + 1)}
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
+              <span className="text-sm text-muted-foreground">× ₹{SEAT_PRICE}/month</span>
             </div>
 
-            <div className="flex justify-between items-center pt-2 border-t border-border">
-              <span className="text-sm text-muted-foreground">
-                {seatsToBuy} seat(s) × ₹{SEAT_PRICE}/month
-              </span>
-              <span className="text-xl font-bold text-primary">₹{totalAmount}/month</span>
+            <div className="flex justify-between items-center pt-2 border-t">
+              <span className="text-sm text-muted-foreground">Monthly total</span>
+              <span className="text-2xl font-bold">₹{totalAmount}</span>
             </div>
           </div>
 
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• Billed monthly via Razorpay</li>
-            <li>• All roles included (Telecaller, Lead Manager, Monitoring)</li>
-            <li>• Cancel anytime</li>
-          </ul>
+          <div className="space-y-1.5 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-3.5 w-3.5" />
+              <span>Billed monthly via Razorpay</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="h-3.5 w-3.5" />
+              <span>All roles included</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Shield className="h-3.5 w-3.5" />
+              <span>Cancel anytime</span>
+            </div>
+          </div>
         </CardContent>
         <CardFooter>
           <Button 
             onClick={handleSetupAutopay} 
-            className="w-full" 
-            size="lg"
+            className="w-full h-12 text-base"
             disabled={isLoading}
             variant={trialExpired ? "destructive" : "default"}
           >
             {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Processing...
-              </>
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing...</>
             ) : (
-              <>
-                <CreditCard className="h-4 w-4 mr-2" />
-                Set Up Autopay - ₹{totalAmount}/month
-              </>
+              <><CreditCard className="h-4 w-4 mr-2" />Set Up Autopay - ₹{totalAmount}/month</>
             )}
           </Button>
         </CardFooter>
@@ -522,162 +437,127 @@ export function SubUserPaywall({ currentSeats, maxFreeSeats = 0, onPurchaseCompl
     );
   }
 
-  // Show active paid subscription
+  // Active paid subscription with autopay
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Team Seats
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              Subscription Active
             </CardTitle>
-            <CardDescription>
-              Manage your team member subscriptions
-            </CardDescription>
+            <p className="text-sm text-muted-foreground mt-1">
+              {paidSeats} seat(s) • ₹{paidSeats * SEAT_PRICE}/month
+            </p>
           </div>
-          <Badge variant="default" className="bg-green-500">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Autopay Active
+          <Badge className="bg-green-500 hover:bg-green-600">
+            <CheckCircle className="h-3 w-3 mr-1" />Autopay
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         {/* Seat Usage */}
         <div className="grid grid-cols-3 gap-4">
-          <div className="p-3 bg-muted/50 border-2 border-border text-center">
-            <p className="text-2xl font-bold">{currentSeats}</p>
-            <p className="text-xs text-muted-foreground">Current Members</p>
+          <div className="text-center p-4 bg-muted/50 rounded-lg border">
+            <div className="text-3xl font-bold">{currentSeats}</div>
+            <div className="text-xs text-muted-foreground mt-1">Used</div>
           </div>
-          <div className="p-3 bg-muted/50 border-2 border-border text-center">
-            <p className="text-2xl font-bold">{paidSeats}</p>
-            <p className="text-xs text-muted-foreground">Paid Seats</p>
+          <div className="text-center p-4 bg-muted/50 rounded-lg border">
+            <div className="text-3xl font-bold">{paidSeats}</div>
+            <div className="text-xs text-muted-foreground mt-1">Paid Seats</div>
           </div>
-          <div className="p-3 bg-muted/50 border-2 border-border text-center">
-            <p className="text-2xl font-bold text-primary">₹{paidSeats * SEAT_PRICE}</p>
-            <p className="text-xs text-muted-foreground">Monthly Cost</p>
+          <div className="text-center p-4 bg-muted/50 rounded-lg border">
+            <div className="text-3xl font-bold text-green-600">{paidSeats - currentSeats}</div>
+            <div className="text-xs text-muted-foreground mt-1">Available</div>
           </div>
         </div>
 
-        {/* Subscription Info */}
-        <div className="p-4 bg-green-500/10 border-2 border-green-500/30">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              <span className="text-sm font-medium">Autopay Enabled</span>
+        {/* Next billing */}
+        {subscription.next_billing_date && (
+          <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+            <div className="flex items-center gap-2 text-sm">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span>Next billing</span>
             </div>
-            <Badge variant="default" className="bg-green-500">Active</Badge>
+            <span className="font-medium">
+              {format(new Date(subscription.next_billing_date), "MMM dd, yyyy")}
+            </span>
           </div>
-          {subscription.next_billing_date && (
-            <div className="flex items-center justify-between mt-2">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Next Billing</span>
-              </div>
-              <span className="text-sm font-medium">
-                {format(new Date(subscription.next_billing_date), "MMM dd, yyyy")}
-              </span>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Add more seats */}
-        {!canAddMore && (
-          <div className="p-4 bg-amber-100 dark:bg-amber-900/20 border-2 border-amber-500/50">
+        {currentSeats >= paidSeats && (
+          <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-amber-800 dark:text-amber-200">
-                  Seat Limit Reached
-                </p>
+                <p className="font-medium text-amber-800 dark:text-amber-200">Seat limit reached</p>
                 <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                  Purchase additional seats to add more team members.
+                  Purchase additional seats to add more members.
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Purchase Additional Seats */}
-        <div className="p-4 bg-muted/50 border-2 border-border space-y-4">
+        {/* Purchase more */}
+        <div className="p-4 bg-muted/30 rounded-lg border space-y-4">
           <h4 className="font-semibold flex items-center gap-2">
-            <CreditCard className="h-4 w-4" />
-            Purchase Additional Seats
+            <Plus className="h-4 w-4" />
+            Add More Seats
           </h4>
           
           <div className="flex items-center gap-4">
-            <Label htmlFor="seats" className="whitespace-nowrap">Number of Seats:</Label>
+            <Label className="whitespace-nowrap text-sm">Seats:</Label>
             <div className="flex items-center gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
+                className="h-9 w-9"
                 onClick={() => setSeatsToBuy(Math.max(1, seatsToBuy - 1))}
                 disabled={seatsToBuy <= 1}
               >
                 <Minus className="h-4 w-4" />
               </Button>
               <Input
-                id="seats"
                 type="number"
                 min={1}
                 max={100}
                 value={seatsToBuy}
                 onChange={(e) => setSeatsToBuy(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-20 text-center"
+                className="w-16 text-center h-9"
               />
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
+                className="h-9 w-9"
                 onClick={() => setSeatsToBuy(seatsToBuy + 1)}
               >
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
+            <span className="text-sm text-muted-foreground">× ₹{SEAT_PRICE}/month</span>
           </div>
 
-          <div className="flex justify-between items-center pt-2 border-t border-border">
-            <span className="text-sm text-muted-foreground">
-              {seatsToBuy} seat(s) × ₹{SEAT_PRICE}/month
-            </span>
-            <span className="text-xl font-bold text-primary">₹{totalAmount}</span>
+          <div className="flex justify-between items-center pt-2 border-t">
+            <span className="text-sm text-muted-foreground">Additional monthly cost</span>
+            <span className="text-xl font-bold">₹{totalAmount}</span>
           </div>
         </div>
-
-        {/* Payment History */}
-        {paymentHistory && paymentHistory.length > 0 && (
-          <div className="p-4 bg-muted/50 border-2 border-border">
-            <h4 className="font-semibold mb-2">Recent Payments</h4>
-            <div className="space-y-2">
-              {paymentHistory.map((payment) => (
-                <div key={payment.id} className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">
-                    {payment.seats_count} seat(s) - {format(new Date(payment.created_at), "MMM dd, yyyy")}
-                  </span>
-                  <span className="font-medium">₹{payment.amount}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </CardContent>
       <CardFooter>
         <Button 
           onClick={handleSetupAutopay} 
-          className="w-full" 
+          className="w-full h-11"
           disabled={isLoading}
         >
           {isLoading ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Processing...
-            </>
+            <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing...</>
           ) : (
-            <>
-              <Plus className="h-4 w-4 mr-2" />
-              Add {seatsToBuy} More Seat(s) - ₹{totalAmount}
-            </>
+            <><Plus className="h-4 w-4 mr-2" />Add {seatsToBuy} Seat(s) - ₹{totalAmount}/month</>
           )}
         </Button>
       </CardFooter>
