@@ -113,62 +113,107 @@ function sanitizeTelephonyData(telephonyData: Record<string, unknown> | null): R
   return sanitized;
 }
 
-// Encode/mask execution data for transport (visible in UI after decode, encoded in DevTools)
-function maskExecutionData(execution: Record<string, unknown>, includeRealRecordingUrl = false): Record<string, unknown> {
-  const masked = { ...execution };
-  
-  // Sanitize telephony_data first, then process recording URL
+// Calculate display cost (hides actual cost breakdown)
+function calculateDisplayCost(durationSeconds: number | null): string | null {
+  if (!durationSeconds || durationSeconds <= 0) return null;
+  const minutes = Math.ceil(durationSeconds / 60);
+  return `${minutes} min`;
+}
+
+// Determine outcome from status
+function determineOutcome(status: string, connected: boolean): string {
+  if (status === "completed" && connected) return "contacted";
+  if (status === "completed" && !connected) return "no_contact";
+  if (status === "failed") return "failed";
+  if (status === "no-answer" || status === "no_answer") return "no_answer";
+  return "pending";
+}
+
+// STRICT: Whitelist-based execution data sanitization
+// ONLY expose these fields - everything else is removed
+function maskExecutionData(execution: Record<string, unknown>, _includeRealRecordingUrl = false): Record<string, unknown> {
   const rawTelephonyData = (execution.telephony_data || {}) as Record<string, unknown>;
-  const telephonyData = sanitizeTelephonyData(rawTelephonyData) || {};
   
-  // Mask recording URL (keep real URL in a separate field for actual playback)
-  if (rawTelephonyData.recording_url) {
-    if (includeRealRecordingUrl) {
-      masked._real_recording_url = rawTelephonyData.recording_url;
-    }
-    telephonyData.recording_url = proxyRecordingUrl(rawTelephonyData.recording_url as string, execution.id as string);
+  // Calculate duration from various sources
+  let durationSeconds: number | null = null;
+  if (rawTelephonyData.duration) {
+    durationSeconds = Math.round(parseFloat(rawTelephonyData.duration as string)) || null;
+  } else if (execution.conversation_duration !== undefined) {
+    durationSeconds = Math.round(execution.conversation_duration as number);
   }
   
-  masked.telephony_data = telephonyData;
+  const connected = durationSeconds ? durationSeconds >= 45 : false;
+  const status = execution.status as string || "initiated";
   
-  // Encode transcript (base64 for network, decoded in frontend for UI display)
-  if (execution.transcript) {
-    masked.transcript = encodeTranscript(execution.transcript as string);
-  }
+  // Build STRICTLY sanitized response - WHITELIST ONLY
+  const sanitized: Record<string, unknown> = {
+    // Core identifiers
+    execution_id: execution.id,
+    status,
+    
+    // Duration & outcome (computed, not raw)
+    duration: durationSeconds,
+    outcome: determineOutcome(status, connected),
+    display_cost: calculateDisplayCost(durationSeconds),
+    
+    // Timestamps (allowed)
+    timestamps: {
+      created_at: execution.created_at,
+      started_at: execution.initiated_at,
+      ended_at: execution.updated_at,
+    },
+    
+    // Encoded sensitive content (decoded in frontend for display only)
+    transcript: execution.transcript ? (
+      isAlreadyEncoded(execution.transcript as string) 
+        ? execution.transcript 
+        : encodeTranscript(execution.transcript as string)
+    ) : null,
+    summary: execution.summary ? (
+      isAlreadyEncoded(execution.summary as string) 
+        ? execution.summary 
+        : encodeSummary(execution.summary as string)
+    ) : null,
+    
+    // Flags only (no raw data)
+    has_recording: !!rawTelephonyData.recording_url,
+    connected,
+    
+    // Sanitized telephony (masked phones, proxied recording)
+    telephony_data: {
+      to_number: maskPhone(rawTelephonyData.to_number as string || execution.user_number as string),
+      from_number: maskPhone(rawTelephonyData.from_number as string || execution.agent_number as string),
+      duration: durationSeconds ? String(durationSeconds) : null,
+      recording_url: rawTelephonyData.recording_url 
+        ? proxyRecordingUrl(rawTelephonyData.recording_url as string, execution.id as string)
+        : null,
+    },
+  };
   
-  // Encode summary
-  if (execution.summary) {
-    masked.summary = encodeSummary(execution.summary as string);
-  }
-  
-  // Encode extracted_data if present (skip if already encoded)
-  if (execution.extracted_data) {
+  // Encode extracted_data if present
+  if (execution.extracted_data && execution.extracted_data !== "{}") {
     const extractedStr = typeof execution.extracted_data === 'string' 
       ? execution.extracted_data 
       : JSON.stringify(execution.extracted_data);
-    masked.extracted_data = isAlreadyEncoded(extractedStr) ? extractedStr : encodeForTransport(extractedStr);
+    if (extractedStr !== "{}" && extractedStr !== "null") {
+      sanitized.extracted_data = isAlreadyEncoded(extractedStr) ? extractedStr : encodeForTransport(extractedStr);
+    }
   }
   
-  // Encode notes if present (skip if already encoded)
-  if (execution.notes) {
-    const notesStr = execution.notes as string;
-    masked.notes = isAlreadyEncoded(notesStr) ? notesStr : encodeForTransport(notesStr);
-  }
+  // REMOVED FROM OUTPUT (never exposed):
+  // - usage_breakdown (LLM tokens, model names, provider info)
+  // - cost_breakdown (actual costs)
+  // - latency_data (performance metrics, regions)
+  // - provider (telephony provider name)
+  // - context_details (internal IDs)
+  // - batch_run_details (internal)
+  // - _real_recording_url (actual S3 URL)
+  // - user_number, agent_number (full phone numbers)
+  // - total_cost (actual cost value)
+  // - agent_extraction, workflow_retries, custom_extractions
+  // - transfer_call_data, smart_status, rescheduled_at
   
-  // Remove sensitive execution-level fields
-  delete masked.agent_id; // External Bolna agent ID - sensitive
-  delete masked.batch_id; // Internal batch reference
-  delete masked.usage; // Token usage details
-  delete masked.cost; // Cost breakdown
-  delete masked.metadata; // May contain provider config
-  delete masked.context_data; // System context
-  delete masked.tools_used; // Internal tool calls
-  delete masked.function_calls; // Function execution details
-  delete masked.llm_latency; // Performance metrics
-  delete masked.stt_latency; // Performance metrics  
-  delete masked.tts_latency; // Performance metrics
-  
-  return masked;
+  return sanitized;
 }
 
 // Mask agent data to hide system prompts
