@@ -75,54 +75,108 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create the user
-    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { full_name },
-    });
+    // Check if user already exists
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find(
+      (u) => u.email?.toLowerCase() === email.toLowerCase()
+    );
 
-    if (createError) {
-      return new Response(
-        JSON.stringify({ error: createError.message }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    let userId: string;
+    let isExisting = false;
+
+    if (existingUser) {
+      // User already exists - check if they have the same role
+      const { data: existingRole } = await supabaseAdmin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", existingUser.id)
+        .maybeSingle();
+
+      if (existingRole) {
+        return new Response(
+          JSON.stringify({ error: `User already exists with role: ${existingRole.role}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // User exists in auth but no role - assign the role
+      userId = existingUser.id;
+      isExisting = true;
+
+      // Update password and metadata
+      await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password,
+        user_metadata: { full_name },
+      });
+    } else {
+      // Create new user
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { full_name },
+      });
+
+      if (createError) {
+        return new Response(
+          JSON.stringify({ error: createError.message }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!newUser.user) {
+        return new Response(
+          JSON.stringify({ error: "Failed to create user" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      userId = newUser.user.id;
     }
 
-    if (!newUser.user) {
-      return new Response(
-        JSON.stringify({ error: "Failed to create user" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Create or update profile with CRM type for clients
+    if (!isExisting) {
+      const profileData: Record<string, unknown> = {
+        user_id: userId,
+        email,
+        full_name: full_name || null,
+        phone: phone || null,
+      };
+      
+      // Add CRM type for clients
+      if (role === "client" && crm_type) {
+        profileData.crm_type = crm_type;
+      }
 
-    // Create profile with CRM type for clients
-    const profileData: Record<string, unknown> = {
-      user_id: newUser.user.id,
-      email,
-      full_name: full_name || null,
-      phone: phone || null,
-    };
-    
-    // Add CRM type for clients
-    if (role === "client" && crm_type) {
-      profileData.crm_type = crm_type;
-    }
+      const { error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .insert(profileData);
 
-    const { error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .insert(profileData);
+      if (profileError) {
+        console.error("Profile creation error:", profileError);
+      }
+    } else {
+      // Update existing profile
+      const updateData: Record<string, unknown> = {
+        full_name: full_name || null,
+        phone: phone || null,
+      };
+      
+      if (role === "client" && crm_type) {
+        updateData.crm_type = crm_type;
+      }
 
-    if (profileError) {
-      console.error("Profile creation error:", profileError);
+      await supabaseAdmin
+        .from("profiles")
+        .update(updateData)
+        .eq("user_id", userId);
     }
 
     // Assign role
     const { error: roleInsertError } = await supabaseAdmin
       .from("user_roles")
       .insert({
-        user_id: newUser.user.id,
+        user_id: userId,
         role,
       });
 
@@ -135,7 +189,7 @@ Deno.serve(async (req) => {
       const { error: creditsError } = await supabaseAdmin
         .from("client_credits")
         .insert({
-          client_id: newUser.user.id,
+          client_id: userId,
           balance: 0,
         });
 
@@ -149,7 +203,7 @@ Deno.serve(async (req) => {
       const { error: pointsError } = await supabaseAdmin
         .from("engineer_points")
         .insert({
-          engineer_id: newUser.user.id,
+          engineer_id: userId,
           total_points: 0,
         });
 
@@ -162,8 +216,8 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         user: {
-          id: newUser.user.id,
-          email: newUser.user.email,
+          id: userId,
+          email,
           role,
         },
       }),
