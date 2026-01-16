@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { InstallPromptBanner } from "@/components/pwa/InstallPromptBanner";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 import Install from "./pages/Install";
@@ -66,6 +67,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <InstallPromptBanner />
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/install" element={<Install />} />
