@@ -893,11 +893,293 @@ serve(async (req) => {
       });
     }
 
+    // ==========================================
+    // CLIENT-SAFE CALLS - Strict filtering for client role
+    // ==========================================
+    if (action === "client_calls") {
+      if (userRole !== "client") {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const startDate = url.searchParams.get("start_date");
+      
+      // Get client's agents first
+      const { data: clientAgents } = await supabase
+        .from("aitel_agents")
+        .select("id")
+        .eq("client_id", userId);
+
+      const agentIds = (clientAgents || []).map((a: Record<string, unknown>) => a.id);
+      
+      if (agentIds.length === 0) {
+        return new Response(JSON.stringify([]), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      let query = supabase
+        .from("calls")
+        .select("id, agent_id, status, connected, duration_seconds, started_at, ended_at, created_at, sentiment, summary, transcript")
+        .eq("client_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (startDate) query = query.gte("created_at", startDate);
+
+      const { data, error } = await query;
+
+      if (error) {
+        return new Response(JSON.stringify({ error: "Failed to fetch calls" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // CLIENT-SAFE RESPONSE: No internal IDs, no raw data, no system info
+      const safeData = await Promise.all((data || []).map(async (call: Record<string, unknown>) => ({
+        id: call.id,
+        status: call.status,
+        connected: call.connected,
+        duration_seconds: call.duration_seconds,
+        started_at: call.started_at,
+        ended_at: call.ended_at,
+        created_at: call.created_at,
+        sentiment: call.sentiment,
+        // Encrypt sensitive text
+        summary: call.summary ? await encryptData(call.summary as string) : null,
+        transcript: call.transcript ? await encryptData(call.transcript as string) : null,
+        // Proxy recording
+        recording_url: call.id ? `proxy:recording:${call.id}` : null,
+        // FORBIDDEN: external_call_id, metadata, agent_config, token usage, latency
+      })));
+
+      return new Response(JSON.stringify(safeData), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ==========================================
+    // CLIENT-SAFE AGENTS - Strict filtering for client role
+    // ==========================================
+    if (action === "client_agents") {
+      if (userRole !== "client") {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data, error } = await supabase
+        .from("aitel_agents")
+        .select("id, agent_name, status, created_at, updated_at")
+        .eq("client_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        return new Response(JSON.stringify({ error: "Failed to fetch agents" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // CLIENT-SAFE RESPONSE: No external IDs, no prompts, no config
+      const safeData = (data || []).map((agent: Record<string, unknown>) => ({
+        id: agent.id,
+        agent_name: agent.agent_name,
+        status: agent.status,
+        created_at: agent.created_at,
+        updated_at: agent.updated_at,
+        // FORBIDDEN: external_agent_id, system_prompt, agent_config, llm_model, voice settings
+      }));
+
+      return new Response(JSON.stringify(safeData), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ==========================================
+    // CLIENT-SAFE CAMPAIGNS - Strict filtering for client role
+    // ==========================================
+    if (action === "client_campaigns") {
+      if (userRole !== "client") {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data, error } = await supabase
+        .from("campaigns")
+        .select(`
+          id, name, description, status, 
+          total_leads, contacted_leads, interested_leads, 
+          not_interested_leads, partially_interested_leads,
+          concurrency_level, created_at, updated_at
+        `)
+        .eq("client_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        return new Response(JSON.stringify({ error: "Failed to fetch campaigns" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // CLIENT-SAFE RESPONSE: No API keys, no sheet IDs, no internal config
+      const safeData = (data || []).map((campaign: Record<string, unknown>) => ({
+        id: campaign.id,
+        name: campaign.name,
+        description: campaign.description,
+        status: campaign.status,
+        total_leads: campaign.total_leads,
+        contacted_leads: campaign.contacted_leads,
+        interested_leads: campaign.interested_leads,
+        not_interested_leads: campaign.not_interested_leads,
+        partially_interested_leads: campaign.partially_interested_leads,
+        concurrency_level: campaign.concurrency_level,
+        created_at: campaign.created_at,
+        updated_at: campaign.updated_at,
+        // FORBIDDEN: google_sheet_id, api_endpoint, api_key, api_headers
+      }));
+
+      return new Response(JSON.stringify(safeData), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ==========================================
+    // CLIENT-SAFE LEADS - Strict filtering for client role
+    // ==========================================
+    if (action === "client_leads") {
+      if (userRole !== "client") {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const campaignId = url.searchParams.get("campaign_id");
+      if (!campaignId) {
+        return new Response(JSON.stringify({ error: "campaign_id required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Verify client owns this campaign
+      const { data: campaign } = await supabase
+        .from("campaigns")
+        .select("id")
+        .eq("id", campaignId)
+        .eq("client_id", userId)
+        .single();
+
+      if (!campaign) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data, error } = await supabase
+        .from("campaign_leads")
+        .select(`
+          id, name, stage, interest_level, 
+          call_status, call_duration, call_sentiment,
+          created_at, updated_at
+        `)
+        .eq("campaign_id", campaignId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        return new Response(JSON.stringify({ error: "Failed to fetch leads" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // CLIENT-SAFE RESPONSE: Masked PII, no raw data
+      const safeData = (data || []).map((lead: Record<string, unknown>) => ({
+        id: lead.id,
+        name: lead.name,
+        stage: lead.stage,
+        interest_level: lead.interest_level,
+        call_status: lead.call_status,
+        call_duration: lead.call_duration,
+        call_sentiment: lead.call_sentiment,
+        created_at: lead.created_at,
+        updated_at: lead.updated_at,
+        // FORBIDDEN: phone_number (raw), email (raw), custom_fields, call_summary (raw)
+      }));
+
+      return new Response(JSON.stringify(safeData), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ==========================================
+    // ADMIN-ONLY: Internal diagnostics endpoint
+    // ==========================================
+    if (action === "admin_diagnostics") {
+      if (userRole !== "admin") {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Admin can access encrypted transcripts and internal metrics
+      const callId = url.searchParams.get("call_id");
+      
+      if (!callId) {
+        return new Response(JSON.stringify({ error: "call_id required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: call, error } = await supabase
+        .from("calls")
+        .select("*")
+        .eq("id", callId)
+        .single();
+
+      if (error || !call) {
+        return new Response(JSON.stringify({ error: "Call not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Admin gets full data with encrypted sensitive fields
+      const diagnostics = {
+        ...call,
+        // Encrypt content but keep structure
+        transcript: call.transcript ? await encryptData(call.transcript as string) : null,
+        summary: call.summary ? await encryptData(call.summary as string) : null,
+        // Include internal IDs for admin debugging
+        external_call_id: call.external_call_id,
+        // Include full metadata
+        metadata: call.metadata,
+        // SECURITY: Still proxy the recording URL
+        recording_url: proxyRecordingUrl(call.recording_url as string, call.id as string),
+      };
+
+      return new Response(JSON.stringify(diagnostics), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({ error: "Invalid action" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
+    // SECURITY: Never expose error details to clients
     const message = IS_PRODUCTION ? "Internal error" : (error instanceof Error ? error.message : "Unknown error");
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
