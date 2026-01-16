@@ -1,10 +1,41 @@
 import { supabase } from "@/integrations/supabase/client";
+import { decodeTranscript, decodeSummary } from "@/lib/decode-utils";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 export interface SecureProxyOptions {
   action: string;
   params?: Record<string, string>;
+}
+
+/**
+ * Decode encoded fields in call/demo_call objects from the secure proxy.
+ * These are base64-encoded for network obfuscation but need to be decoded for UI display.
+ */
+function decodeCallData<T>(data: T): T {
+  if (!data) return data;
+  
+  // Handle arrays
+  if (Array.isArray(data)) {
+    return data.map((item) => decodeCallData(item)) as T;
+  }
+  
+  // Handle objects with transcript/summary fields
+  if (typeof data === "object" && data !== null) {
+    const obj = data as Record<string, unknown>;
+    const decoded = { ...obj };
+    
+    if (typeof decoded.transcript === "string") {
+      decoded.transcript = decodeTranscript(decoded.transcript) || decoded.transcript;
+    }
+    if (typeof decoded.summary === "string") {
+      decoded.summary = decodeSummary(decoded.summary) || decoded.summary;
+    }
+    
+    return decoded as T;
+  }
+  
+  return data;
 }
 
 export async function fetchSecureData<T>(options: SecureProxyOptions): Promise<T> {
@@ -32,7 +63,10 @@ export async function fetchSecureData<T>(options: SecureProxyOptions): Promise<T
     throw new Error(error.error || "Failed to fetch data");
   }
 
-  return response.json();
+  const rawData = await response.json();
+  
+  // Decode encoded fields for UI display
+  return decodeCallData(rawData);
 }
 
 // Specific typed fetch functions

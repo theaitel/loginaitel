@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { decodeTranscript, decodeSummary } from "@/lib/decode-utils";
 
 const AITEL_PROXY_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/aitel-proxy`;
 
@@ -472,6 +473,18 @@ export async function getExecution(executionId: string): Promise<AitelResponse<C
       data: null,
       error: (res.data as any).error || "Agent execution not found",
     };
+  }
+
+  // Decode encoded fields (transcript, summary) for UI display
+  if (res.data) {
+    const decoded = { ...res.data };
+    if (decoded.transcript) {
+      decoded.transcript = decodeTranscript(decoded.transcript) || decoded.transcript;
+    }
+    if (decoded.summary) {
+      decoded.summary = decodeSummary(decoded.summary) || decoded.summary;
+    }
+    return { data: decoded as CallExecution, error: null };
   }
 
   return res as AitelResponse<CallExecution>;

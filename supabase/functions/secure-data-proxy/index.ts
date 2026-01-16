@@ -6,10 +6,26 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Mask phone number to show only last 4 digits
+// ==========================================
+// ENCODING UTILITIES - encode sensitive data so it's not readable in DevTools
+// but can be decoded in frontend for display
+// ==========================================
+
+// Base64 encode a string (for network obfuscation)
+function encodeForTransport(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    return "enc:" + btoa(unescape(encodeURIComponent(value)));
+  } catch {
+    return "enc:" + btoa(value);
+  }
+}
+
+// Mask phone number - keep last 4 visible, encode the rest
 function maskPhone(phone: string | null): string {
   if (!phone) return "****";
   if (phone.length <= 4) return "****";
+  // Show last 4 digits only (truly masked, not encoded)
   return "*".repeat(phone.length - 4) + phone.slice(-4);
 }
 
@@ -19,18 +35,19 @@ function maskUuid(uuid: string | null): string {
   return uuid.slice(0, 8) + "...";
 }
 
-// Mask transcript - show only summary indicator, not full content
-function maskTranscript(transcript: string | null): string | null {
+// Encode transcript for transport - will be decoded in frontend
+function encodeTranscript(transcript: string | null): string | null {
   if (!transcript) return null;
-  // Return indicator that transcript exists without exposing content
-  const length = transcript.length;
-  if (length > 100) {
-    return `[Transcript available - ${Math.round(length / 100) * 100}+ characters]`;
-  }
-  return `[Transcript available]`;
+  return encodeForTransport(transcript);
 }
 
-// Mask system prompt - never expose in logs
+// Encode summary for transport
+function encodeSummary(summary: string | null): string | null {
+  if (!summary) return null;
+  return encodeForTransport(summary);
+}
+
+// Mask system prompt - never expose in logs (keep this truly masked)
 function maskSystemPrompt(prompt: string | null): string | null {
   if (!prompt) return null;
   return "[System prompt configured]";
@@ -147,12 +164,12 @@ serve(async (req) => {
         .select("id, agent_name")
         .in("id", agentIds);
 
-      // Map and mask data
+      // Map and encode data (encoded for network, decoded in frontend)
       const maskedData = demoCalls?.map((call: any) => ({
         ...call,
         phone_number: maskPhone(call.phone_number),
         external_call_id: maskUuid(call.external_call_id),
-        transcript: maskTranscript(call.transcript),
+        transcript: encodeTranscript(call.transcript),
         recording_url: proxyRecordingUrl(call.recording_url, call.id),
         uploaded_audio_url: proxyRecordingUrl(call.uploaded_audio_url, call.id),
         tasks: tasks?.find(t => t.id === call.task_id) || null,
@@ -185,12 +202,12 @@ serve(async (req) => {
         });
       }
 
-      // Mask sensitive data
+      // Encode sensitive data (for network obfuscation, decoded in frontend)
       const maskedData = data?.map((call: any) => ({
         ...call,
         phone_number: maskPhone(call.phone_number),
         external_call_id: maskUuid(call.external_call_id),
-        transcript: maskTranscript(call.transcript),
+        transcript: encodeTranscript(call.transcript),
         recording_url: proxyRecordingUrl(call.recording_url, call.id),
         uploaded_audio_url: proxyRecordingUrl(call.uploaded_audio_url, call.id),
       }));
@@ -247,12 +264,13 @@ serve(async (req) => {
         });
       }
 
-      // Mask sensitive data - for admin, mask lead IDs and external call IDs
+      // Encode sensitive data - for admin (encoded in network, decoded in frontend)
       const maskedData = data?.map((call: any) => ({
         ...call,
         external_call_id: maskUuid(call.external_call_id),
         lead_id: maskUuid(call.lead_id),
-        transcript: maskTranscript(call.transcript),
+        transcript: encodeTranscript(call.transcript),
+        summary: encodeSummary(call.summary),
         recording_url: proxyRecordingUrl(call.recording_url, call.id),
         agent: { name: 'Agent' },
       }));
@@ -284,12 +302,13 @@ serve(async (req) => {
         });
       }
 
-      // Mask sensitive data
+      // Encode sensitive data (for network obfuscation)
       const maskedData = data?.map((call: any) => ({
         ...call,
         external_call_id: maskUuid(call.external_call_id),
         lead_id: maskUuid(call.lead_id),
-        transcript: maskTranscript(call.transcript),
+        transcript: encodeTranscript(call.transcript),
+        summary: encodeSummary(call.summary),
         recording_url: proxyRecordingUrl(call.recording_url, call.id),
       }));
 
