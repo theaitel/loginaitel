@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -174,7 +175,7 @@ export default function ClientCalls() {
   const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
 
   // Fetch agents for this client (to get external agent IDs)
-  const { data: agents } = useQuery({
+  const { data: agents, isLoading: isLoadingAgents } = useQuery({
     queryKey: ["client-agents-calls", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
@@ -578,26 +579,39 @@ export default function ClientCalls() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-          <div className="border-2 border-border bg-card p-4 text-center">
-            <p className="text-2xl font-bold">{stats.total}</p>
-            <p className="text-sm text-muted-foreground">Total Calls</p>
-          </div>
-          <div className="border-2 border-border bg-card p-4 text-center">
-            <p className="text-2xl font-bold text-chart-2">{stats.completed}</p>
-            <p className="text-sm text-muted-foreground">Completed</p>
-          </div>
-          <div className="border-2 border-border bg-card p-4 text-center">
-            <p className="text-2xl font-bold text-chart-1">{stats.connected}</p>
-            <p className="text-sm text-muted-foreground">Connected</p>
-          </div>
-          <div className="border-2 border-border bg-card p-4 text-center">
-            <p className="text-2xl font-bold">{formatDuration(stats.avgDuration)}</p>
-            <p className="text-sm text-muted-foreground">Avg Duration</p>
-          </div>
-          <div className="border-2 border-border bg-card p-4 text-center">
-            <p className="text-2xl font-bold text-chart-2">{stats.connectionRate}%</p>
-            <p className="text-sm text-muted-foreground">Connection Rate</p>
-          </div>
+          {isLoadingAgents ? (
+            <>
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="border-2 border-border bg-card p-4 text-center">
+                  <Skeleton className="h-8 w-16 mx-auto mb-2" />
+                  <Skeleton className="h-4 w-20 mx-auto" />
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              <div className="border-2 border-border bg-card p-4 text-center">
+                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-sm text-muted-foreground">Total Calls</p>
+              </div>
+              <div className="border-2 border-border bg-card p-4 text-center">
+                <p className="text-2xl font-bold text-chart-2">{stats.completed}</p>
+                <p className="text-sm text-muted-foreground">Completed</p>
+              </div>
+              <div className="border-2 border-border bg-card p-4 text-center">
+                <p className="text-2xl font-bold text-chart-1">{stats.connected}</p>
+                <p className="text-sm text-muted-foreground">Connected</p>
+              </div>
+              <div className="border-2 border-border bg-card p-4 text-center">
+                <p className="text-2xl font-bold">{formatDuration(stats.avgDuration)}</p>
+                <p className="text-sm text-muted-foreground">Avg Duration</p>
+              </div>
+              <div className="border-2 border-border bg-card p-4 text-center">
+                <p className="text-2xl font-bold text-chart-2">{stats.connectionRate}%</p>
+                <p className="text-sm text-muted-foreground">Connection Rate</p>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Tabs */}
@@ -739,13 +753,22 @@ export default function ClientCalls() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8">
-                        <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-                        Loading calls...
-                      </TableCell>
-                    </TableRow>
+                  {isLoadingAgents || isLoading ? (
+                    <>
+                      {[...Array(5)].map((_, i) => (
+                        <TableRow key={i} className="border-b-2 border-border">
+                          <TableCell><Skeleton className="h-4 w-4" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                          <TableCell><Skeleton className="h-8 w-24" /></TableCell>
+                        </TableRow>
+                      ))}
+                    </>
                   ) : !agents || agents.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={9} className="text-center py-8">
