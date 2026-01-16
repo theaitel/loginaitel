@@ -29,6 +29,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchAdminDemoCalls } from "@/lib/secure-proxy";
 import { downloadRecording } from "@/lib/aitel";
 import { useQuery } from "@tanstack/react-query";
+import { useDecryptedContent } from "@/hooks/useDecryptedContent";
+import { isEncryptedPayload } from "@/lib/secure-decrypt";
 import {
   Phone,
   Search,
@@ -41,6 +43,7 @@ import {
   Loader2,
   ExternalLink,
   FileText,
+  Lock,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 
@@ -56,7 +59,7 @@ interface DemoCall {
   started_at: string | null;
   ended_at: string | null;
   recording_url: string | null;
-  transcript: string | null;
+  transcript: unknown; // Can be string or encrypted payload
   created_at: string;
   updated_at: string;
 }
@@ -470,21 +473,55 @@ export default function AdminDemoLogs() {
                 </div>
               )}
 
-              {selectedCall.transcript && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Transcript
-                  </label>
-                  <div className="bg-muted p-4 max-h-48 overflow-y-auto text-sm whitespace-pre-wrap">
-                    {selectedCall.transcript}
-                  </div>
-                </div>
-              )}
+              <DemoCallTranscriptSection call={selectedCall} />
             </div>
           )}
         </DialogContent>
       </Dialog>
     </DashboardLayout>
+  );
+}
+
+// Sub-component to handle transcript decryption
+function DemoCallTranscriptSection({ call }: { call: DemoCall }) {
+  const rawTranscript = call.transcript;
+  const isEncrypted = isEncryptedPayload(rawTranscript);
+  
+  const { 
+    data: decryptedTranscript, 
+    isLoading: isDecryptingTranscript 
+  } = useDecryptedContent({
+    field: rawTranscript,
+    resourceId: call.id,
+    resourceType: "demo_call",
+    fieldType: "transcript",
+    enabled: !!rawTranscript,
+  });
+
+  if (!rawTranscript) return null;
+
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+        <FileText className="h-4 w-4" />
+        Transcript
+        {isEncrypted && (
+          <span className="flex items-center gap-1 text-xs text-chart-2">
+            <Lock className="h-3 w-3" />
+            Encrypted
+          </span>
+        )}
+      </label>
+      <div className="bg-muted p-4 max-h-48 overflow-y-auto text-sm whitespace-pre-wrap">
+        {isDecryptingTranscript ? (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Decrypting transcript...
+          </div>
+        ) : (
+          decryptedTranscript || "No transcript available"
+        )}
+      </div>
+    </div>
   );
 }
