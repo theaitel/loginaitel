@@ -43,13 +43,27 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user: requestingUser }, error: authError } = await supabaseClient.auth.getUser();
-    if (authError || !requestingUser) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Verify user using getClaims (works with signing-keys)
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    
+    let requestingUserId: string;
+    if (claimsError || !claimsData?.claims) {
+      // Fallback to getUser for backward compatibility
+      const { data: { user: requestingUser }, error: authError } = await supabaseClient.auth.getUser();
+      if (authError || !requestingUser) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      requestingUserId = requestingUser.id;
+    } else {
+      requestingUserId = claimsData.claims.sub as string;
     }
+    
+    // Create user object for compatibility
+    const requestingUser = { id: requestingUserId };
 
     // Check if requesting user is admin
     const { data: roleData, error: roleError } = await supabaseAdmin

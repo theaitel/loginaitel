@@ -27,10 +27,27 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !user) {
-      throw new Error("Unauthorized");
+    // Verify user using getClaims (works with signing-keys)
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    
+    let userId: string;
+    let userEmail: string | undefined;
+    if (claimsError || !claimsData?.claims) {
+      // Fallback to getUser for backward compatibility
+      const { data: { user: userData }, error: userError } = await supabaseClient.auth.getUser();
+      if (userError || !userData) {
+        throw new Error("Unauthorized");
+      }
+      userId = userData.id;
+      userEmail = userData.email;
+    } else {
+      userId = claimsData.claims.sub as string;
+      userEmail = claimsData.claims.email as string | undefined;
     }
+    
+    // Create user object for compatibility
+    const user = { id: userId, email: userEmail };
 
     const { paymentId }: InvoiceRequest = await req.json();
 

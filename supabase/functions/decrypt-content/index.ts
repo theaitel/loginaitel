@@ -45,14 +45,27 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: `Bearer ${token}` } },
     });
 
-    // Verify user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Invalid token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Verify user using getClaims (works with signing-keys)
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    
+    let userId: string;
+    if (claimsError || !claimsData?.claims) {
+      debugLog("getClaims failed, trying getUser fallback", { error: claimsError?.message });
+      // Fallback to getUser for backward compatibility
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        return new Response(
+          JSON.stringify({ error: "Invalid token" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      userId = user.id;
+    } else {
+      userId = claimsData.claims.sub as string;
     }
+    
+    // Create user object for compatibility with existing code
+    const user = { id: userId };
 
     // Get user role for authorization
     const { data: roleData } = await supabase
