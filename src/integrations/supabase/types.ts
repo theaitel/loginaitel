@@ -1031,6 +1031,84 @@ export type Database = {
           },
         ]
       }
+      seat_payments: {
+        Row: {
+          amount: number
+          billing_period_end: string | null
+          billing_period_start: string | null
+          client_id: string
+          created_at: string
+          id: string
+          razorpay_order_id: string
+          razorpay_payment_id: string | null
+          seats_count: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          billing_period_end?: string | null
+          billing_period_start?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          razorpay_order_id: string
+          razorpay_payment_id?: string | null
+          seats_count: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          billing_period_end?: string | null
+          billing_period_start?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          razorpay_order_id?: string
+          razorpay_payment_id?: string | null
+          seats_count?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      seat_subscriptions: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          last_payment_date: string | null
+          next_billing_date: string | null
+          razorpay_subscription_id: string | null
+          seats_count: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          last_payment_date?: string | null
+          next_billing_date?: string | null
+          razorpay_subscription_id?: string | null
+          seats_count?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          last_payment_date?: string | null
+          next_billing_date?: string | null
+          razorpay_subscription_id?: string | null
+          seats_count?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sub_user_activity_logs: {
         Row: {
           action_type: string
