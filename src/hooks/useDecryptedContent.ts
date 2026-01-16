@@ -28,9 +28,16 @@ export function useDecryptedContent({
   // If it's a plain string, return it directly without making API call
   const isPlainString = typeof field === "string";
   const isEncrypted = isEncryptedPayload(field);
+  
+  // Create a stable identifier for the field content to use in cache key
+  const fieldIdentifier = isPlainString 
+    ? "plain" 
+    : isEncrypted 
+      ? (field as EncryptedPayload).iv 
+      : "null";
 
   return useQuery({
-    queryKey: ["decrypted-content", resourceId, resourceType, fieldType],
+    queryKey: ["decrypted-content", resourceId, resourceType, fieldType, fieldIdentifier],
     queryFn: async () => {
       if (isPlainString) {
         return field as string;
