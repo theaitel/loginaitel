@@ -61,7 +61,7 @@ import {
 } from "recharts";
 import { listAgentExecutions, type CallExecution } from "@/lib/aitel";
 
-// Map Bolna execution to our display format
+// Map execution to our display format
 interface CallDisplay {
   id: string;
   phone_number: string;
@@ -155,9 +155,9 @@ export default function ClientCalls() {
   const [dateRange, setDateRange] = useState("7");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Fetch agents for this client (to get external Bolna agent IDs)
+  // Fetch agents for this client (to get external agent IDs)
   const { data: agents } = useQuery({
-    queryKey: ["client-agents-bolna", user?.id],
+    queryKey: ["client-agents-calls", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -179,9 +179,9 @@ export default function ClientCalls() {
     return map;
   }, [agents]);
 
-  // Fetch call executions from Bolna API for each agent
+  // Fetch call executions from API for each agent
   const { data: calls, isLoading } = useQuery({
-    queryKey: ["client-calls-bolna", user?.id, dateRange, agents?.length],
+    queryKey: ["client-calls-list", user?.id, dateRange, agents?.length],
     enabled: !!user?.id && !!agents && agents.length > 0,
     queryFn: async () => {
       const startDate = subDays(new Date(), parseInt(dateRange));
@@ -194,12 +194,12 @@ export default function ClientCalls() {
         try {
           const result = await listAgentExecutions({
             agent_id: agent.external_agent_id,
-            page_size: 50, // Bolna max is 50 per page
+            page_size: 50, // Max 50 per page
             from: startDate.toISOString(),
           });
 
           if (result.data?.data) {
-            // Map Bolna execution to our display format
+            // Map execution to our display format
             const mappedCalls = result.data.data.map((exec: CallExecution): CallDisplay => {
               // Get duration - prefer telephony_data.duration, fallback to conversation_time
               let durationSeconds: number | null = null;

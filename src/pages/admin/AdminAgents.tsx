@@ -44,7 +44,7 @@ import { format } from "date-fns";
 import { AgentEngineerAssignment } from "@/components/admin/AgentEngineerAssignment";
 import { WebhookConfigDialog } from "@/components/admin/WebhookConfigDialog";
 
-interface BolnaAgentFromAPI {
+interface AgentFromAPI {
   id: string;
   agent_name: string;
   agent_type?: string;
@@ -133,11 +133,11 @@ export default function AdminAgents() {
       let synced = 0;
       let updated = 0;
 
-      for (const agent of aitelAgents as BolnaAgentFromAPI[]) {
+      for (const agent of aitelAgents as AgentFromAPI[]) {
         // Get full agent details including prompts
         const { data: fullAgent } = await getAitelAgent(agent.id);
         
-        const systemPrompt = (fullAgent as BolnaAgentFromAPI)?.agent_prompts?.task_1?.system_prompt || "";
+        const systemPrompt = (fullAgent as AgentFromAPI)?.agent_prompts?.task_1?.system_prompt || "";
         const agentConfig = fullAgent || agent;
 
         // Check if already exists

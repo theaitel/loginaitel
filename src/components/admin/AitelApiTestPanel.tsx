@@ -51,7 +51,7 @@ export function AitelApiTestPanel() {
     );
   };
 
-  const callBolnaProxy = async (
+  const callApiProxy = async (
     action: string,
     params: Record<string, string> = {},
     body?: unknown,
@@ -106,7 +106,7 @@ export function AitelApiTestPanel() {
       status: "pending",
     });
 
-    const listAgentsResult = await callBolnaProxy("list-agents");
+    const listAgentsResult = await callApiProxy("list-agents");
     updateResult(0, {
       status: listAgentsResult.error ? "error" : "success",
       statusCode: listAgentsResult.status,
@@ -128,7 +128,7 @@ export function AitelApiTestPanel() {
       status: "pending",
     });
 
-    const listVoicesResult = await callBolnaProxy("list-voices");
+    const listVoicesResult = await callApiProxy("list-voices");
     updateResult(1, {
       status: listVoicesResult.error ? "error" : "success",
       statusCode: listVoicesResult.status,
@@ -144,7 +144,7 @@ export function AitelApiTestPanel() {
       status: "pending",
     });
 
-    const listPhoneResult = await callBolnaProxy("list-phone-numbers");
+    const listPhoneResult = await callApiProxy("list-phone-numbers");
     updateResult(2, {
       status: listPhoneResult.error ? "error" : "success",
       statusCode: listPhoneResult.status,
@@ -161,7 +161,7 @@ export function AitelApiTestPanel() {
         status: "pending",
       });
 
-      const getAgentResult = await callBolnaProxy("get-agent", { agent_id: testAgentId });
+      const getAgentResult = await callApiProxy("get-agent", { agent_id: testAgentId });
       updateResult(3, {
         status: getAgentResult.error ? "error" : "success",
         statusCode: getAgentResult.status,
@@ -177,7 +177,7 @@ export function AitelApiTestPanel() {
         status: "pending",
       });
 
-      const listExecsResult = await callBolnaProxy("list-agent-executions", { agent_id: testAgentId });
+      const listExecsResult = await callApiProxy("list-agent-executions", { agent_id: testAgentId });
       updateResult(4, {
         status: listExecsResult.error ? "error" : "success",
         statusCode: listExecsResult.status,
@@ -208,7 +208,7 @@ export function AitelApiTestPanel() {
       status: "pending",
     });
 
-    const result = await callBolnaProxy(action, params, body, method);
+    const result = await callApiProxy(action, params, body, method);
     updateResult(idx, {
       status: result.error ? "error" : "success",
       statusCode: result.status,
@@ -236,7 +236,7 @@ export function AitelApiTestPanel() {
       status: "pending",
     });
 
-    const getResult = await callBolnaProxy("get-agent", { agent_id: agentId });
+    const getResult = await callApiProxy("get-agent", { agent_id: agentId });
     updateResult(getIdx, {
       status: getResult.error ? "error" : "success",
       statusCode: getResult.status,
@@ -257,7 +257,7 @@ export function AitelApiTestPanel() {
     const originalPrompt = (agentData?.agent_prompts as Record<string, unknown>)?.task_1 as Record<string, string> | undefined;
     const originalSystemPrompt = originalPrompt?.system_prompt || "N/A";
 
-    // Step 2: PUT update with new system prompt (must include agent_config per Bolna API)
+    // Step 2: PUT update with new system prompt (must include agent_config per API)
     const putIdx = results.length;
     addResult({
       endpoint: `update-agent (PUT)`,
@@ -274,7 +274,7 @@ export function AitelApiTestPanel() {
       }
     };
 
-    const putResult = await callBolnaProxy("update-agent", { agent_id: agentId }, updateBody, "PUT");
+    const putResult = await callApiProxy("update-agent", { agent_id: agentId }, updateBody, "PUT");
     
     updateResult(putIdx, {
       status: putResult.error ? "error" : "success",
@@ -298,7 +298,7 @@ export function AitelApiTestPanel() {
       status: "pending",
     });
 
-    const verifyResult = await callBolnaProxy("get-agent", { agent_id: agentId });
+    const verifyResult = await callApiProxy("get-agent", { agent_id: agentId });
     const verifyData = verifyResult.data as Record<string, unknown>;
     const newPrompt = (verifyData?.agent_prompts as Record<string, unknown>)?.task_1 as Record<string, string> | undefined;
     const newSystemPrompt = newPrompt?.system_prompt || "N/A";
@@ -355,7 +355,7 @@ export function AitelApiTestPanel() {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-chart-4" />
-            Bolna API Test Panel
+            API Test Panel
           </CardTitle>
           {results.length > 0 && (
             <div className="flex gap-2">
@@ -586,7 +586,7 @@ export function AitelApiTestPanel() {
         {results.length === 0 && (
           <div className="text-center py-8 text-muted-foreground border-2 border-dashed border-border">
             <Zap className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p>Click "Run All Tests" to test Bolna API endpoints</p>
+            <p>Click "Run All Tests" to test API endpoints</p>
             <p className="text-sm">
               Tests: list-agents, list-voices, list-phone-numbers, get-agent, list-executions
             </p>

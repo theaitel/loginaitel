@@ -77,9 +77,9 @@ export function ClientPhoneAllocation() {
     },
   });
 
-  // Fetch available phone numbers from Bolna
+  // Fetch available phone numbers from provider
   const { data: phoneNumbers } = useQuery({
-    queryKey: ["bolna-phone-numbers"],
+    queryKey: ["provider-phone-numbers"],
     queryFn: async () => {
       const response = await listPhoneNumbers();
       if (response.error) throw new Error(response.error);

@@ -70,7 +70,7 @@ export function CallDetailsDialog({
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // Fetch execution details from Bolna if we have external_call_id
+  // Fetch execution details if we have external_call_id
   const { data: execution } = useQuery({
     queryKey: ["execution", call?.external_call_id],
     enabled: !!call?.external_call_id && open,

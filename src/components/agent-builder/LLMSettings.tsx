@@ -11,7 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Settings } from "lucide-react";
 
-// LLM Models available in Bolna
+// LLM Models available
 const LLM_MODELS = [
   { id: "gpt-4.1-nano", name: "GPT-4.1 Nano", provider: "openai", family: "openai", description: "Fast & cost-effective (Default)" },
   { id: "gpt-4.1-mini", name: "GPT-4.1 Mini", provider: "openai", family: "openai", description: "Balanced performance" },
