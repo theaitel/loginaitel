@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StatCard } from "@/components/ui/stat-card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CreditCard,
   Bot,
@@ -11,6 +12,8 @@ import {
   XCircle,
   Clock,
   Loader2,
+  AlertTriangle,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -204,12 +207,35 @@ export default function ClientDashboard() {
   return (
     <DashboardLayout role="client">
       <div className="space-y-8">
+        {/* No Credits Warning */}
+        {credits === 0 && (
+          <Card className="border-2 border-destructive/50 bg-destructive/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <Lock className="h-5 w-5" />
+                No Credits Available
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-3">
+                You need to purchase credits to access calling features, campaigns, and add team members.
+              </p>
+              <Button asChild>
+                <Link to="/client/billing">
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Buy Credits Now
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold mb-2">Welcome, {companyName}!</h1>
             <p className="text-muted-foreground">
-              {weekStats?.total ? "Your voice campaigns are performing well." : "Start making calls to see your performance."}
+              {credits === 0 ? "Purchase credits to start making calls." : weekStats?.total ? "Your voice campaigns are performing well." : "Start making calls to see your performance."}
             </p>
           </div>
           <Button className="shadow-sm" asChild>

@@ -48,6 +48,7 @@ import {
   Target,
   Megaphone,
 } from "lucide-react";
+import { CreditGate } from "@/components/client/CreditGate";
 
 interface Campaign {
   id: string;
@@ -200,10 +201,9 @@ export default function ClientCampaigns() {
   const totalContacted = campaigns?.reduce((sum, c) => sum + c.contacted_leads, 0) || 0;
   const totalInterested = campaigns?.reduce((sum, c) => sum + c.interested_leads, 0) || 0;
 
-  return (
-    <DashboardLayout role="client">
-      <div className="space-y-6">
-        {/* Header */}
+  const content = (
+    <div className="space-y-6">
+      {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold mb-2">Campaigns</h1>
@@ -438,6 +438,13 @@ export default function ClientCampaigns() {
           </Table>
         </div>
       </div>
+  );
+
+  return (
+    <DashboardLayout role="client">
+      <CreditGate requiredCredits={1} featureName="Campaigns">
+        {content}
+      </CreditGate>
     </DashboardLayout>
   );
 }

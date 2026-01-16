@@ -28,7 +28,10 @@ import {
   XCircle,
   RefreshCw,
   Activity,
-  BarChart3
+  BarChart3,
+  Lock,
+  IndianRupee,
+  Mail
 } from "lucide-react";
 import { SubUserActivityLog } from "@/components/admin/SubUserActivityLog";
 import { ActivitySummaryDashboard } from "@/components/admin/ActivitySummaryDashboard";
@@ -48,6 +51,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+const SEAT_PRICE = 300; // ₹300 per seat per month
 
 interface SubUser {
   id: string;
@@ -108,6 +113,7 @@ export default function ClientTeam() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [activityLogOpen, setActivityLogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<SubUser | null>(null);
+  const [showSeatPaywall, setShowSeatPaywall] = useState(false);
   const [formData, setFormData] = useState({
     phone: "",
     full_name: "",
@@ -127,6 +133,41 @@ export default function ClientTeam() {
     return "+" + cleaned;
   };
 
+  // Fetch client credits to check if they have any balance
+  const { data: creditData } = useQuery({
+    queryKey: ["client-credits-team", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("client_credits")
+        .select("balance")
+        .eq("client_id", user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return { balance: data?.balance || 0 };
+    },
+  });
+
+  // Fetch paid seats info from payments
+  const { data: paidSeatsData } = useQuery({
+    queryKey: ["client-paid-seats", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      // Check if client has made any seat payments
+      const { data, error } = await supabase
+        .from("payments")
+        .select("credits, status")
+        .eq("client_id", user!.id)
+        .eq("status", "completed");
+      
+      if (error) throw error;
+      
+      // If client has purchased credits, allow sub-users
+      const totalCredits = (data || []).reduce((sum, p) => sum + (p.credits || 0), 0);
+      return { hasPaidCredits: totalCredits > 0, totalCredits };
+    },
+  });
+
   // Fetch sub-users
   const { data: subUsers, isLoading } = useQuery({
     queryKey: ["client-sub-users", user?.id],
@@ -142,6 +183,9 @@ export default function ClientTeam() {
     },
     enabled: !!user,
   });
+
+  // Check if can add more members
+  const canAddMembers = (creditData?.balance || 0) > 0 || paidSeatsData?.hasPaidCredits;
 
   // Add sub-user mutation
   const addSubUser = useMutation({
@@ -262,6 +306,44 @@ export default function ClientTeam() {
   return (
     <DashboardLayout role="client">
       <div className="space-y-6">
+        {/* Paywall Alert */}
+        {!canAddMembers && (
+          <Card className="border-2 border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                <Lock className="h-5 w-5" />
+                Purchase Credits to Add Team Members
+              </CardTitle>
+              <CardDescription className="text-amber-600 dark:text-amber-400">
+                You need to purchase credits before adding team members. Each team member costs ₹{SEAT_PRICE}/month.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid sm:grid-cols-3 gap-4 mb-4">
+                <div className="p-3 bg-background border-2 border-border text-center">
+                  <IndianRupee className="h-5 w-5 mx-auto mb-1 text-primary" />
+                  <p className="text-2xl font-bold">₹{SEAT_PRICE}</p>
+                  <p className="text-xs text-muted-foreground">Per Seat/Month</p>
+                </div>
+                <div className="p-3 bg-background border-2 border-border text-center">
+                  <Users className="h-5 w-5 mx-auto mb-1 text-primary" />
+                  <p className="text-sm font-medium">All Roles Included</p>
+                  <p className="text-xs text-muted-foreground">Telecaller, Lead Manager, Monitoring</p>
+                </div>
+                <div className="p-3 bg-background border-2 border-border text-center">
+                  <CheckCircle className="h-5 w-5 mx-auto mb-1 text-green-500" />
+                  <p className="text-sm font-medium">Cancel Anytime</p>
+                  <p className="text-xs text-muted-foreground">Monthly billing</p>
+                </div>
+              </div>
+              <Button onClick={() => window.location.href = "mailto:sales@aitel.io?subject=Team Seat Subscription"} className="w-full">
+                <Mail className="h-4 w-4 mr-2" />
+                Contact Sales for Team Seats
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
@@ -271,13 +353,29 @@ export default function ClientTeam() {
             </h1>
             <p className="text-muted-foreground mt-1">
               Add sub-users with their phone numbers. They can login using OTP.
+              {stats.total > 0 && (
+                <span className="ml-2 text-primary font-medium">
+                  (₹{stats.total * SEAT_PRICE}/month)
+                </span>
+              )}
             </p>
           </div>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+            if (open && !canAddMembers) {
+              toast({
+                title: "Credits Required",
+                description: "Please purchase credits first to add team members.",
+                variant: "destructive",
+              });
+              return;
+            }
+            setIsAddDialogOpen(open);
+          }}>
             <DialogTrigger asChild>
-              <Button>
+              <Button disabled={!canAddMembers}>
                 <UserPlus className="h-4 w-4 mr-2" />
                 Add Team Member
+                {!canAddMembers && <Lock className="h-3 w-3 ml-2" />}
               </Button>
             </DialogTrigger>
             <DialogContent>

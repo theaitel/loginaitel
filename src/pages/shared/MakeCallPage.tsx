@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { makeCall } from "@/lib/aitel";
 import { useQuery } from "@tanstack/react-query";
+import { CreditGate } from "@/components/client/CreditGate";
 
 interface MakeCallPageProps {
   role: "admin" | "engineer" | "client";
@@ -278,188 +279,199 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
     }
   };
 
-  return (
-    <DashboardLayout role={role}>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Phone className="h-6 w-6" />
-              Make Call
-            </h1>
-            <p className="text-muted-foreground">
-              Initiate phone calls using AI agents. Check call status in Call History.
-            </p>
-          </div>
-          <Button variant="outline" onClick={() => refetchCalls()} disabled={loadingCalls}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loadingCalls ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+  // For clients, wrap content with CreditGate
+  const content = (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Phone className="h-6 w-6" />
+            Make Call
+          </h1>
+          <p className="text-muted-foreground">
+            Initiate phone calls using AI agents. Check call status in Call History.
+          </p>
         </div>
+        <Button variant="outline" onClick={() => refetchCalls()} disabled={loadingCalls}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${loadingCalls ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+      </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Call Configuration */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Call Configuration</CardTitle>
-              <CardDescription>
-                Select an agent and enter phone number to make a call
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Engineer Approval Restriction Message */}
-              {role === "engineer" && hasApprovedPrompts === false && (
-                <div className="flex items-start gap-3 p-4 bg-destructive/10 border-2 border-destructive text-destructive">
-                  <ShieldAlert className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold">Call Testing Not Available</p>
-                    <p className="text-sm mt-1">
-                      You need to have at least one task with an approved prompt before you can test calls. 
-                      Complete your prompt editing and submit for admin approval first.
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Call Configuration */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Call Configuration</CardTitle>
+            <CardDescription>
+              Select an agent and enter phone number to make a call
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Engineer Approval Restriction Message */}
+            {role === "engineer" && hasApprovedPrompts === false && (
+              <div className="flex items-start gap-3 p-4 bg-destructive/10 border-2 border-destructive text-destructive">
+                <ShieldAlert className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold">Call Testing Not Available</p>
+                  <p className="text-sm mt-1">
+                    You need to have at least one task with an approved prompt before you can test calls. 
+                    Complete your prompt editing and submit for admin approval first.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {role === "engineer" && checkingApproval && (
+              <div className="flex items-center gap-2 p-4 bg-muted border-2 border-border">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm text-muted-foreground">Checking approval status...</span>
+              </div>
+            )}
+
+            {/* Agent Selection - Only show if engineer has approval or is admin/client */}
+            {(hasApprovedPrompts || role !== "engineer") && (
+              <>
+                <div className="space-y-2">
+                  <Label>Select Agent *</Label>
+                  {loadingAgents ? (
+                    <div className="h-10 bg-muted animate-pulse rounded" />
+                  ) : agents.length > 0 ? (
+                    <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
+                      <SelectTrigger className="border-2">
+                        <SelectValue placeholder="Choose an agent" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {agents.map((agent) => (
+                          <SelectItem key={agent.id} value={agent.id}>
+                            {agent.agent_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-sm text-muted-foreground p-3 bg-muted/50 border-2 border-border">
+                      {role === "engineer"
+                        ? "No eligible agents assigned to you. Ask an admin to assign you an agent and a client."
+                        : "No agents available. Please contact admin to assign agents."}
                     </p>
-                  </div>
+                  )}
                 </div>
-              )}
 
-              {role === "engineer" && checkingApproval && (
-                <div className="flex items-center gap-2 p-4 bg-muted border-2 border-border">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm text-muted-foreground">Checking approval status...</span>
+                {/* Phone Number Input */}
+                <div className="space-y-2">
+                  <Label>Phone Number *</Label>
+                  <Input
+                    placeholder="+1234567890"
+                    value={manualPhone}
+                    onChange={(e) => setManualPhone(e.target.value)}
+                    className="border-2 font-mono"
+                  />
                 </div>
-              )}
-
-              {/* Agent Selection - Only show if engineer has approval or is admin/client */}
-              {(hasApprovedPrompts || role !== "engineer") && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Select Agent *</Label>
-                    {loadingAgents ? (
-                      <div className="h-10 bg-muted animate-pulse rounded" />
-                    ) : agents.length > 0 ? (
-                      <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
-                        <SelectTrigger className="border-2">
-                          <SelectValue placeholder="Choose an agent" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {agents.map((agent) => (
-                            <SelectItem key={agent.id} value={agent.id}>
-                              {agent.agent_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <p className="text-sm text-muted-foreground p-3 bg-muted/50 border-2 border-border">
-                        {role === "engineer"
-                          ? "No eligible agents assigned to you. Ask an admin to assign you an agent and a client."
-                          : "No agents available. Please contact admin to assign agents."}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Phone Number Input */}
-                  <div className="space-y-2">
-                    <Label>Phone Number *</Label>
-                    <Input
-                      placeholder="+1234567890"
-                      value={manualPhone}
-                      onChange={(e) => setManualPhone(e.target.value)}
-                      className="border-2 font-mono"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Name (Optional)</Label>
-                    <Input
-                      placeholder="Contact name"
-                      value={manualName}
-                      onChange={(e) => setManualName(e.target.value)}
-                      className="border-2"
-                    />
-                  </div>
-
-                  {/* Make Call Button */}
-                  <Button
-                    onClick={handleMakeCall}
-                    disabled={isCalling || !selectedAgentId || !manualPhone}
-                    className="w-full"
-                    size="lg"
-                  >
-                    {isCalling ? (
-                      <>
-                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                        Initiating Call...
-                      </>
-                    ) : (
-                      <>
-                        <Phone className="h-5 w-5 mr-2" />
-                        Make Call
-                      </>
-                    )}
-                  </Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Call History */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Calls</CardTitle>
-              <CardDescription>
-                Your recent calls - check Call History for full details
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loadingCalls ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                
+                <div className="space-y-2">
+                  <Label>Name (Optional)</Label>
+                  <Input
+                    placeholder="Contact name"
+                    value={manualName}
+                    onChange={(e) => setManualName(e.target.value)}
+                    className="border-2"
+                  />
                 </div>
-              ) : recentCalls.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No calls yet
-                </p>
-              ) : (
-                <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                  {recentCalls.map((call) => {
-                    const status = statusConfig[call.status] || statusConfig.completed;
-                    return (
-                      <div
-                        key={call.id}
-                        className="flex items-center justify-between p-3 border-2 border-border"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-muted flex items-center justify-center">
-                            <User className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm">
-                              Call #{call.id.slice(0, 8)}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {call.agent?.agent_name || "Unknown Agent"}
-                            </p>
-                          </div>
+
+                {/* Make Call Button */}
+                <Button
+                  onClick={handleMakeCall}
+                  disabled={isCalling || !selectedAgentId || !manualPhone}
+                  className="w-full"
+                  size="lg"
+                >
+                  {isCalling ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      Initiating Call...
+                    </>
+                  ) : (
+                    <>
+                      <Phone className="h-5 w-5 mr-2" />
+                      Make Call
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Call History */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Calls</CardTitle>
+            <CardDescription>
+              Your recent calls - check Call History for full details
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingCalls ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : recentCalls.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No calls yet
+              </p>
+            ) : (
+              <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                {recentCalls.map((call) => {
+                  const status = statusConfig[call.status] || statusConfig.completed;
+                  return (
+                    <div
+                      key={call.id}
+                      className="flex items-center justify-between p-3 border-2 border-border"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-muted flex items-center justify-center">
+                          <User className="h-4 w-4" />
                         </div>
-                        <div className="text-right">
-                          <Badge className={status.className}>
-                            {status.icon}
-                            <span className="ml-1">{status.label}</span>
-                          </Badge>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {new Date(call.created_at).toLocaleTimeString()}
+                        <div>
+                          <p className="font-medium text-sm">
+                            Call #{call.id.slice(0, 8)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {call.agent?.agent_name || "Unknown Agent"}
                           </p>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                      <div className="text-right">
+                        <Badge className={status.className}>
+                          {status.icon}
+                          <span className="ml-1">{status.label}</span>
+                        </Badge>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(call.created_at).toLocaleTimeString()}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+    </div>
+  );
+
+  return (
+    <DashboardLayout role={role}>
+      {role === "client" ? (
+        <CreditGate requiredCredits={1} featureName="Make Call">
+          {content}
+        </CreditGate>
+      ) : (
+        content
+      )}
     </DashboardLayout>
   );
 }
