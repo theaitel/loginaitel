@@ -19,6 +19,30 @@ function maskUuid(uuid: string | null): string {
   return uuid.slice(0, 8) + "...";
 }
 
+// Mask transcript - show only summary indicator, not full content
+function maskTranscript(transcript: string | null): string | null {
+  if (!transcript) return null;
+  // Return indicator that transcript exists without exposing content
+  const length = transcript.length;
+  if (length > 100) {
+    return `[Transcript available - ${Math.round(length / 100) * 100}+ characters]`;
+  }
+  return `[Transcript available]`;
+}
+
+// Mask system prompt - never expose in logs
+function maskSystemPrompt(prompt: string | null): string | null {
+  if (!prompt) return null;
+  return "[System prompt configured]";
+}
+
+// Generate proxied recording URL instead of direct storage URL
+function proxyRecordingUrl(url: string | null, callId: string): string | null {
+  if (!url) return null;
+  // Return a proxy indicator - actual playback should go through aitel-proxy
+  return `proxy:recording:${callId}`;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -127,7 +151,10 @@ serve(async (req) => {
       const maskedData = demoCalls?.map((call: any) => ({
         ...call,
         phone_number: maskPhone(call.phone_number),
-        external_call_id: call.external_call_id, // Keep for syncing but it won't show in console logs from query
+        external_call_id: maskUuid(call.external_call_id),
+        transcript: maskTranscript(call.transcript),
+        recording_url: proxyRecordingUrl(call.recording_url, call.id),
+        uploaded_audio_url: proxyRecordingUrl(call.uploaded_audio_url, call.id),
         tasks: tasks?.find(t => t.id === call.task_id) || null,
         aitel_agents: agents?.find(a => a.id === call.agent_id) || null,
       }));
@@ -163,6 +190,9 @@ serve(async (req) => {
         ...call,
         phone_number: maskPhone(call.phone_number),
         external_call_id: maskUuid(call.external_call_id),
+        transcript: maskTranscript(call.transcript),
+        recording_url: proxyRecordingUrl(call.recording_url, call.id),
+        uploaded_audio_url: proxyRecordingUrl(call.uploaded_audio_url, call.id),
       }));
 
       return new Response(JSON.stringify(maskedData), {
@@ -222,6 +252,8 @@ serve(async (req) => {
         ...call,
         external_call_id: maskUuid(call.external_call_id),
         lead_id: maskUuid(call.lead_id),
+        transcript: maskTranscript(call.transcript),
+        recording_url: proxyRecordingUrl(call.recording_url, call.id),
         agent: { name: 'Agent' },
       }));
 
@@ -257,6 +289,8 @@ serve(async (req) => {
         ...call,
         external_call_id: maskUuid(call.external_call_id),
         lead_id: maskUuid(call.lead_id),
+        transcript: maskTranscript(call.transcript),
+        recording_url: proxyRecordingUrl(call.recording_url, call.id),
       }));
 
       return new Response(JSON.stringify(maskedData), {
@@ -337,12 +371,14 @@ serve(async (req) => {
         });
       }
 
-      // Mask external agent IDs
+      // Mask external agent IDs and system prompts
       const maskedData = data?.map((task: any) => ({
         ...task,
         aitel_agents: task.aitel_agents ? {
           ...task.aitel_agents,
           external_agent_id: maskUuid(task.aitel_agents.external_agent_id),
+          current_system_prompt: maskSystemPrompt(task.aitel_agents.current_system_prompt),
+          original_system_prompt: maskSystemPrompt(task.aitel_agents.original_system_prompt),
         } : null,
       }));
 
