@@ -20,10 +20,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import { useSessionActivity } from "@/hooks/useSessionActivity";
 
 export default function ClientDashboard() {
   const { user } = useAuth();
   const companyName = user?.user_metadata?.full_name || "Client";
+
+  // Track session activity for single-device enforcement
+  useSessionActivity();
 
   // Fetch credit balance
   const { data: credits } = useQuery({

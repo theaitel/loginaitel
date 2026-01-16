@@ -94,6 +94,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
+    // Clear active session for clients before signing out
+    if (user && role === "client" && !isSubUser) {
+      try {
+        await supabase
+          .from("client_active_sessions" as any)
+          .update({ is_active: false })
+          .eq("client_id", user.id);
+      } catch (error) {
+        console.error("Failed to clear active session:", error);
+      }
+    }
+    
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);

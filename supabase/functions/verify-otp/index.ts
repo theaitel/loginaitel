@@ -9,6 +9,8 @@ const corsHeaders = {
 interface VerifyOtpRequest {
   phone: string;
   otp: string;
+  forceLogin?: boolean;
+  deviceInfo?: string;
 }
 
 function formatPhoneNumber(phone: string): string {
@@ -30,7 +32,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { phone, otp }: VerifyOtpRequest = await req.json();
+    const { phone, otp, forceLogin, deviceInfo }: VerifyOtpRequest = await req.json();
 
     if (!phone || !otp) {
       throw new Error("Phone number and OTP are required");
@@ -102,17 +104,6 @@ serve(async (req) => {
         throw new Error("You don't have client access. Please use the correct login portal.");
       }
 
-      // Update password for existing user so we can sign them in
-      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-        userId,
-        { password: phonePassword }
-      );
-
-      if (updateError) {
-        console.error("Error updating user password:", updateError);
-        throw new Error("Failed to authenticate");
-      }
-
       // Check if this user is a sub-user
       if (subUserData) {
         isSubUser = true;
@@ -126,6 +117,69 @@ serve(async (req) => {
             .update({ user_id: userId, activated_at: new Date().toISOString() })
             .eq("id", subUserData.id);
         }
+      } else {
+        // This is a main client (not sub-user) - check for active sessions
+        clientId = userId;
+        
+        // Check for existing active session
+        const { data: activeSession } = await supabaseAdmin
+          .from("client_active_sessions")
+          .select("*")
+          .eq("client_id", userId)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (activeSession && !forceLogin) {
+          // Check if client has paid seats (allows multi-device)
+          const { data: seatSubscription } = await supabaseAdmin
+            .from("seat_subscriptions")
+            .select("seats_count, status")
+            .eq("client_id", userId)
+            .eq("status", "active")
+            .maybeSingle();
+
+          // If no paid seats, block multi-device login
+          if (!seatSubscription || seatSubscription.seats_count === 0) {
+            const lastActivity = new Date(activeSession.last_activity_at);
+            const minutesAgo = Math.floor((Date.now() - lastActivity.getTime()) / 60000);
+            
+            return new Response(
+              JSON.stringify({
+                error: "session_conflict",
+                message: "You are already logged in on another device",
+                existingSession: {
+                  device: activeSession.device_info || "Unknown device",
+                  lastActivity: minutesAgo < 60 
+                    ? `${minutesAgo} minutes ago` 
+                    : `${Math.floor(minutesAgo / 60)} hours ago`,
+                  loggedInAt: activeSession.logged_in_at,
+                },
+                requiresForceLogin: true,
+                upgradeMessage: "Purchase team seats to enable multi-device access for your team.",
+              }),
+              { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+
+        // If forceLogin, invalidate all existing sessions
+        if (forceLogin && activeSession) {
+          await supabaseAdmin
+            .from("client_active_sessions")
+            .update({ is_active: false })
+            .eq("client_id", userId);
+        }
+      }
+
+      // Update password for existing user so we can sign them in
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        userId,
+        { password: phonePassword }
+      );
+
+      if (updateError) {
+        console.error("Error updating user password:", updateError);
+        throw new Error("Failed to authenticate");
       }
     } else {
       // Check if this is a sub-user's first login
@@ -196,6 +250,7 @@ serve(async (req) => {
         }
 
         userId = newUser.user.id;
+        clientId = userId;
         isNewUser = true;
 
         // Create client role
@@ -230,6 +285,25 @@ serve(async (req) => {
     if (signInError || !signInData.session) {
       console.error("Error signing in:", signInError);
       throw new Error("Failed to create session");
+    }
+
+    // For main clients (not sub-users), track their active session
+    if (!isSubUser && clientId) {
+      // Deactivate any existing sessions
+      await supabaseAdmin
+        .from("client_active_sessions")
+        .update({ is_active: false })
+        .eq("client_id", clientId);
+
+      // Create new active session
+      await supabaseAdmin.from("client_active_sessions").insert({
+        client_id: clientId,
+        session_token: signInData.session.access_token.slice(-20), // Store only last 20 chars for reference
+        device_info: deviceInfo || "Unknown device",
+        is_active: true,
+        logged_in_at: new Date().toISOString(),
+        last_activity_at: new Date().toISOString(),
+      });
     }
 
     // Clean up used OTP
