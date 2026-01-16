@@ -21,8 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -74,6 +73,9 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  
+  // Enable 20-minute session timeout
+  useSessionTimeout();
 
   const navItems =
     role === "admin"
