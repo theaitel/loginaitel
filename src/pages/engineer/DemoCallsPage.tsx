@@ -197,12 +197,12 @@ export default function DemoCallsPage() {
     };
   }, [queryClient, toast]);
 
-  // Sync demo call recording from Bolna
+  // Sync demo call recording from provider
   const syncRecordingMutation = useMutation({
     mutationFn: async (call: DemoCall) => {
       if (!call.external_call_id) throw new Error("No external call ID");
 
-      // Fetch execution data from Bolna
+      // Fetch execution data from provider
       const result = await getExecution(call.external_call_id);
       if (result.error || !result.data) {
         throw new Error(result.error || "Failed to fetch call data");
@@ -375,7 +375,7 @@ export default function DemoCallsPage() {
 
         {/* Info */}
         <div className="text-sm text-muted-foreground bg-muted/30 p-4 border-2 border-border">
-          <p><strong>How it works:</strong> Make demo calls to test your agent. After the call ends, click "Sync Recording" to fetch the recording from Bolna. Then submit your best demo call for admin review.</p>
+          <p><strong>How it works:</strong> Make demo calls to test your agent. After the call ends, click "Sync Recording" to fetch the recording. Then submit your best demo call for admin review.</p>
         </div>
 
         {/* Table */}

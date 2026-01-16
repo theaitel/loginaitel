@@ -244,7 +244,7 @@ export default function MakeCallPage({ role }: MakeCallPageProps) {
     setIsCalling(true);
 
     try {
-      // Call directly via Bolna API with phone number
+      // Make call via API with phone number
       const { data, error } = await makeCall({
         phone_number: manualPhone,
         agent_id: selectedAgentId,

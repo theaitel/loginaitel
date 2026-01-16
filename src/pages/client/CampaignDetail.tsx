@@ -884,7 +884,7 @@ export default function CampaignDetail() {
               <div className="space-y-3">
                 <h3 className="font-semibold flex items-center gap-2">
                   <FileSpreadsheet className="h-5 w-5 text-green-500" />
-                  CSV Upload Format (Bolna Compatible)
+                  CSV Upload Format
                 </h3>
                 <div className="bg-muted p-4 rounded-lg font-mono text-sm">
                   <p>name,phone_number,email</p>

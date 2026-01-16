@@ -84,7 +84,7 @@ export default function AgentConfigEditor() {
     }
   }, [systemPrompt, selectedAgent]);
 
-  // Save mutation - saves system prompt to both local DB and Bolna API
+  // Save mutation - saves system prompt to both local DB and API
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!selectedAgentId || !selectedAgent) throw new Error("No agent selected");
@@ -112,7 +112,7 @@ export default function AgentConfigEditor() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-assigned-agents-editor"] });
-      toast.success("Agent prompt saved and synced with Bolna!");
+      toast.success("Agent prompt saved and synced!");
       setHasChanges(false);
     },
     onError: (error) => {

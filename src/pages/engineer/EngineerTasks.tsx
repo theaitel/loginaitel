@@ -478,7 +478,7 @@ export default function EngineerTasks() {
             const execution = result.data;
             const telephonyData = execution.telephony_data || {};
             
-            // Determine new status based on Bolna execution status
+            // Determine new status based on execution status
             const terminalStatuses = ["completed", "call-disconnected", "no-answer", "busy", "failed", "canceled", "stopped"];
             const isTerminal = terminalStatuses.includes(execution.status);
             
