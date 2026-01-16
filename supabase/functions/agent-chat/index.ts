@@ -16,6 +16,42 @@ interface ChatMessage {
   content: string;
 }
 
+type UserRole = "admin" | "engineer" | "client";
+
+/**
+ * ROLE-BASED RESPONSE FILTERING
+ * 
+ * Client users MUST NOT receive:
+ * - AI model names, providers
+ * - Token usage, latency metrics
+ * - Internal system diagnostics
+ * 
+ * Response is sanitized based on user role before returning.
+ */
+function createSafeResponse(
+  response: string,
+  userRole: UserRole,
+  _internalMetrics?: {
+    model?: string;
+    tokens?: number;
+    latency?: number;
+  }
+): Record<string, unknown> {
+  // Base response for ALL users
+  const baseResponse = {
+    response,
+  };
+
+  // Clients get ONLY the response text - nothing else
+  if (userRole === "client") {
+    return baseResponse;
+  }
+
+  // Admin/Engineer can see diagnostics in development
+  // But still not exposed to client-facing responses
+  return baseResponse;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -55,7 +91,7 @@ serve(async (req) => {
     // Create user object for compatibility
     const user = { id: userId };
 
-    // Check user role - engineers, admins, and clients can use this
+    // Check user role
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
@@ -63,6 +99,8 @@ serve(async (req) => {
       .maybeSingle();
 
     const allowedRoles = ["admin", "engineer", "client"];
+    const userRole = (roleData?.role || "client") as UserRole;
+    
     if (!roleData?.role || !allowedRoles.includes(roleData.role)) {
       return new Response(
         JSON.stringify({ error: "Forbidden: Access denied" }),
@@ -109,6 +147,9 @@ Important guidelines:
       content: userMessage,
     });
 
+    // Track timing for internal metrics only
+    const startTime = Date.now();
+
     // Call Lovable AI
     const aiResponse = await fetch(LOVABLE_AI_URL, {
       method: "POST",
@@ -124,11 +165,15 @@ Important guidelines:
       }),
     });
 
+    const latencyMs = Date.now() - startTime;
+
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error("Lovable AI error:", errorText);
+      console.error("AI service error:", errorText);
+      
+      // Return generic error to clients - no internal details
       return new Response(
-        JSON.stringify({ error: "AI service error", details: errorText }),
+        JSON.stringify({ error: "Service temporarily unavailable" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -148,15 +193,29 @@ Important guidelines:
       // Table might not exist yet, that's fine
     }
 
+    // Create role-filtered response
+    // SECURITY: Clients never see model name, tokens, latency
+    const safeResponse = createSafeResponse(
+      response,
+      userRole,
+      // Internal metrics - NEVER exposed to clients
+      {
+        model: aiData.model,
+        tokens: aiData.usage?.total_tokens,
+        latency: latencyMs,
+      }
+    );
+
     return new Response(
-      JSON.stringify({ response }),
+      JSON.stringify(safeResponse),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Agent chat error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    
+    // Return generic error - no internal details
     return new Response(
-      JSON.stringify({ error: "Internal server error", message: errorMessage }),
+      JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
