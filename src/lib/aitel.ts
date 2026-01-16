@@ -38,7 +38,7 @@ async function callAitelProxy<T>(
     const data = await response.json();
 
     if (!response.ok) {
-      return { data: null, error: data.error || "Request failed" };
+      return { data: null, error: data.error || data.message || "Request failed" };
     }
 
     return { data, error: null };
