@@ -391,7 +391,7 @@ export default function AdminEngineers() {
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {format(new Date(engineer.created_at), "MMM d, yyyy")}
+                      {engineer.created_at ? format(new Date(engineer.created_at), "MMM d, yyyy") : "—"}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
