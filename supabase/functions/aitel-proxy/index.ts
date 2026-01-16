@@ -455,7 +455,7 @@ serve(async (req) => {
           recipient_data: body.recipient_data || {},
         };
 
-        response = await fetch(`${BOLNA_API_BASE}/v2/call`, {
+        response = await fetch(`${BOLNA_API_BASE}/call`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${BOLNA_API_KEY}`,
