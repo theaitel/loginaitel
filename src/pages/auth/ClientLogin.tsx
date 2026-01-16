@@ -4,11 +4,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Mic, ArrowLeft, Building2, Phone } from "lucide-react";
+import { Mic, ArrowLeft, Building2, Phone, AlertTriangle, Users, Monitor } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { setRememberMe } from "@/hooks/useSessionTimeout";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+interface SessionConflict {
+  device: string;
+  lastActivity: string;
+  loggedInAt: string;
+  upgradeMessage: string;
+}
 
 export default function ClientLogin() {
   const [phone, setPhone] = useState("");
@@ -16,6 +31,8 @@ export default function ClientLogin() {
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMeState] = useState(false);
+  const [sessionConflict, setSessionConflict] = useState<SessionConflict | null>(null);
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -62,23 +79,42 @@ export default function ClientLogin() {
     }
   };
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent, forceLogin = false) => {
     e.preventDefault();
     setLoading(true);
+    setShowConflictDialog(false);
 
     try {
+      const deviceInfo = `${navigator.platform} - ${navigator.userAgent.split(' ').slice(-2).join(' ')}`;
+      
       const response = await supabase.functions.invoke("verify-otp", {
         body: { 
           phone: phone.replace(/\D/g, ""),
           otp: otp,
+          forceLogin,
+          deviceInfo,
         },
       });
+
+      // Check for session conflict (409 status)
+      if (response.error?.message?.includes("session_conflict") || response.data?.error === "session_conflict") {
+        const conflictData = response.data || JSON.parse(response.error?.message || "{}");
+        setSessionConflict({
+          device: conflictData.existingSession?.device || "Unknown device",
+          lastActivity: conflictData.existingSession?.lastActivity || "Recently",
+          loggedInAt: conflictData.existingSession?.loggedInAt || "",
+          upgradeMessage: conflictData.upgradeMessage || "",
+        });
+        setShowConflictDialog(true);
+        setLoading(false);
+        return;
+      }
 
       if (response.error) {
         throw new Error(response.error.message || "Failed to verify OTP");
       }
 
-      if (response.data?.error) {
+      if (response.data?.error && response.data.error !== "session_conflict") {
         throw new Error(response.data.error);
       }
 
@@ -133,6 +169,10 @@ export default function ClientLogin() {
     }
   };
 
+  const handleForceLogin = (e: React.FormEvent) => {
+    handleVerifyOtp(e, true);
+  };
+
   const handleResendOtp = async () => {
     setLoading(true);
     try {
@@ -161,6 +201,60 @@ export default function ClientLogin() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* Session Conflict Dialog */}
+      <Dialog open={showConflictDialog} onOpenChange={setShowConflictDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              Already Logged In
+            </DialogTitle>
+            <DialogDescription>
+              You are currently logged in on another device. Single-device login is enforced for your account.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="p-4 bg-muted/50 border-2 border-border space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <Monitor className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">Current Session:</span>
+              </div>
+              <p className="text-sm text-muted-foreground pl-6">{sessionConflict?.device}</p>
+              <p className="text-xs text-muted-foreground pl-6">Last active: {sessionConflict?.lastActivity}</p>
+            </div>
+
+            <div className="p-4 bg-primary/5 border-2 border-primary/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">Need Multi-Device Access?</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {sessionConflict?.upgradeMessage || "Purchase team seats to enable multi-device login for your team."}
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate("/client/team")}
+              className="w-full sm:w-auto"
+            >
+              <Users className="h-4 w-4 mr-2" />
+              View Team Seats
+            </Button>
+            <Button
+              onClick={handleForceLogin}
+              disabled={loading}
+              className="w-full sm:w-auto"
+            >
+              {loading ? "Signing in..." : "Sign Out Other Device & Login Here"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <header className="p-6 border-b-2 border-border">
         <Link to="/" className="flex items-center gap-2 w-fit">
