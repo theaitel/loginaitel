@@ -144,7 +144,7 @@ export default function AdminClients() {
       });
       
       setCreateStep("success");
-      queryClient.invalidateQueries({ queryKey: ["admin-clients"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-clients-secure"] });
     } catch (error: any) {
       toast({
         title: "Verification Failed",
