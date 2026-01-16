@@ -103,6 +103,40 @@ export function CallDetailsDialog({
     }
   }, [open]);
 
+  // Determine raw transcript and summary sources (may be encrypted)
+  // These need to be computed before hooks to maintain consistent hook ordering
+  const rawTranscript = execution?.transcript || call?.transcript;
+  const rawSummary = execution?.summary || call?.summary;
+
+  // Use secure decryption for transcript - hooks must be called unconditionally
+  const { 
+    data: decryptedTranscript, 
+    isLoading: isDecryptingTranscript 
+  } = useDecryptedContent({
+    field: rawTranscript,
+    resourceId: call?.id || "",
+    resourceType: "call",
+    fieldType: "transcript",
+    enabled: open && !!rawTranscript && !!call,
+  });
+
+  // Use secure decryption for summary
+  const { 
+    data: decryptedSummary, 
+    isLoading: isDecryptingSummary 
+  } = useDecryptedContent({
+    field: rawSummary,
+    resourceId: call?.id || "",
+    resourceType: "call",
+    fieldType: "summary",
+    enabled: open && !!rawSummary && !!call,
+  });
+
+  // Check if content is encrypted
+  const isTranscriptEncrypted = isEncryptedPayload(rawTranscript);
+  const isSummaryEncrypted = isEncryptedPayload(rawSummary);
+
+  // Early return AFTER all hooks
   if (!call) return null;
 
   const formatDuration = (seconds: number | null) => {
@@ -163,38 +197,6 @@ export function CallDetailsDialog({
 
   // Get recording URL from execution or call
   const recordingUrl = execution?.telephony_data?.recording_url || call.recording_url;
-
-  // Determine raw transcript and summary sources (may be encrypted)
-  const rawTranscript = execution?.transcript || call.transcript;
-  const rawSummary = execution?.summary || call.summary;
-
-  // Use secure decryption for transcript
-  const { 
-    data: decryptedTranscript, 
-    isLoading: isDecryptingTranscript 
-  } = useDecryptedContent({
-    field: rawTranscript,
-    resourceId: call.id,
-    resourceType: "call",
-    fieldType: "transcript",
-    enabled: open && !!rawTranscript,
-  });
-
-  // Use secure decryption for summary
-  const { 
-    data: decryptedSummary, 
-    isLoading: isDecryptingSummary 
-  } = useDecryptedContent({
-    field: rawSummary,
-    resourceId: call.id,
-    resourceType: "call",
-    fieldType: "summary",
-    enabled: open && !!rawSummary,
-  });
-
-  // Check if content is encrypted
-  const isTranscriptEncrypted = isEncryptedPayload(rawTranscript);
-  const isSummaryEncrypted = isEncryptedPayload(rawSummary);
 
   // Parse transcript into messages
   const parseTranscript = (transcript: string | null) => {
