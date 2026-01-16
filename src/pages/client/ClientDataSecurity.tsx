@@ -1,6 +1,12 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { 
   Shield, 
   Lock, 
@@ -13,7 +19,8 @@ import {
   Database,
   Fingerprint,
   ShieldCheck,
-  AlertTriangle
+  AlertTriangle,
+  HelpCircle
 } from "lucide-react";
 
 export default function ClientDataSecurity() {
@@ -294,6 +301,120 @@ export default function ClientDataSecurity() {
                 </div>
               ))}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Security FAQ */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <HelpCircle className="h-5 w-5" />
+              Frequently Asked Questions
+            </CardTitle>
+            <CardDescription>
+              Common questions about data security and privacy at Aitel
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="item-1">
+                <AccordionTrigger>How is my call data protected?</AccordionTrigger>
+                <AccordionContent>
+                  All call transcripts, summaries, and extracted data are encrypted using AES-256-GCM encryption 
+                  before being stored. This is the same encryption standard used by banks and government agencies. 
+                  Your data is decrypted only when you request to view it, and the decryption happens server-side 
+                  with your authenticated session.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-2">
+                <AccordionTrigger>Can other clients see my data?</AccordionTrigger>
+                <AccordionContent>
+                  Absolutely not. Aitel implements strict Row Level Security (RLS) policies on all database tables. 
+                  This means that even at the database level, queries are automatically filtered to only return 
+                  data that belongs to your account. There is no possibility of cross-tenant data exposure.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-3">
+                <AccordionTrigger>Why are phone numbers and emails masked?</AccordionTrigger>
+                <AccordionContent>
+                  Phone numbers and email addresses are considered Personally Identifiable Information (PII). 
+                  We mask these in displays and network responses to prevent accidental exposure or data scraping. 
+                  You can still identify records through partial information while maintaining security. 
+                  Full details are only accessible through secure, authenticated endpoints when absolutely necessary.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-4">
+                <AccordionTrigger>What happens to my data when I make an API call?</AccordionTrigger>
+                <AccordionContent>
+                  Every API request goes through our secure proxy layer. First, your authentication token is 
+                  validated. Then, the system verifies your role and ownership of the requested data. Sensitive 
+                  fields are automatically masked or encrypted before being sent to your browser. This ensures 
+                  that even if network traffic were intercepted, the data would be meaningless to attackers.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-5">
+                <AccordionTrigger>Can I access my AI agent's system prompts?</AccordionTrigger>
+                <AccordionContent>
+                  For security reasons, raw system prompts are never exposed to clients. This protects your 
+                  AI agent configurations from being reverse-engineered or copied. You can view high-level 
+                  agent settings and capabilities, but the detailed prompts that power your agents remain 
+                  securely stored and encrypted on our servers.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-6">
+                <AccordionTrigger>How long is my session valid?</AccordionTrigger>
+                <AccordionContent>
+                  For security, your session automatically expires after 20 minutes of inactivity. This helps 
+                  protect your account if you forget to log out or leave your device unattended. You'll be 
+                  prompted to log in again when your session expires. We recommend logging out manually when 
+                  you're finished using the platform.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-7">
+                <AccordionTrigger>How are call recordings protected?</AccordionTrigger>
+                <AccordionContent>
+                  Call recordings are stored in secure, encrypted storage. When you request to play a recording, 
+                  the URL is proxied through our secure servers rather than exposing the direct storage URL. 
+                  This prevents unauthorized access and ensures that only authenticated users can access 
+                  recordings they own.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-8">
+                <AccordionTrigger>What data can Aitel employees see?</AccordionTrigger>
+                <AccordionContent>
+                  Our admin team has access to manage the platform, but even internal access is limited and 
+                  logged. Sensitive client data like call transcripts and summaries are encrypted, and access 
+                  is strictly controlled. We follow the principle of least privilege—employees only have access 
+                  to what's necessary for their specific role.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-9">
+                <AccordionTrigger>Is my data backed up?</AccordionTrigger>
+                <AccordionContent>
+                  Yes, all data is regularly backed up with encrypted backups stored in secure, geographically 
+                  distributed locations. Backups are encrypted using the same AES-256 standard as live data. 
+                  In case of any system issues, your data can be restored without any loss.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="item-10">
+                <AccordionTrigger>How do I report a security concern?</AccordionTrigger>
+                <AccordionContent>
+                  If you notice any suspicious activity, potential security vulnerabilities, or have concerns 
+                  about your data, please contact our security team immediately. You can reach us through the 
+                  Settings page or by contacting your account manager. We take all security reports seriously 
+                  and investigate them promptly.
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </CardContent>
         </Card>
 
