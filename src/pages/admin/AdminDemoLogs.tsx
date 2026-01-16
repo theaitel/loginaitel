@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,11 +26,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAdminDemoCalls } from "@/lib/secure-proxy";
+import { fetchAdminDemoCalls, isProxyRecordingUrl, getDemoRecordingUrl } from "@/lib/secure-proxy";
 import { downloadRecording } from "@/lib/aitel";
 import { useQuery } from "@tanstack/react-query";
 import { useDecryptedContent } from "@/hooks/useDecryptedContent";
 import { isEncryptedPayload } from "@/lib/secure-decrypt";
+import { toast } from "sonner";
 import {
   Phone,
   Search,
@@ -458,20 +459,7 @@ export default function AdminDemoLogs() {
                 </div>
               )}
 
-              {selectedCall.recording_url && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Recording</label>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => downloadRecording(selectedCall.recording_url!, `demo-call-${selectedCall.id}.mp3`)}
-                    className="w-full"
-                  >
-                    <Play className="h-4 w-4 mr-2" />
-                    Download Recording
-                  </Button>
-                </div>
-              )}
+              <DemoCallRecordingSection call={selectedCall} />
 
               <DemoCallTranscriptSection call={selectedCall} />
             </div>
@@ -479,6 +467,73 @@ export default function AdminDemoLogs() {
         </DialogContent>
       </Dialog>
     </DashboardLayout>
+  );
+}
+
+// Sub-component to handle recording with proxy URL resolution
+function DemoCallRecordingSection({ call }: { call: DemoCall }) {
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const resolveRecordingUrl = async () => {
+      if (!call.recording_url) {
+        setResolvedUrl(null);
+        return;
+      }
+
+      // Check if it's a proxy URL that needs resolution
+      if (isProxyRecordingUrl(call.recording_url)) {
+        setIsLoading(true);
+        try {
+          const result = await getDemoRecordingUrl(call.id);
+          setResolvedUrl(result.url);
+        } catch (error) {
+          console.error("Failed to resolve recording URL:", error);
+          toast.error("Failed to load recording URL");
+          setResolvedUrl(null);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        // Direct URL, use as-is
+        setResolvedUrl(call.recording_url);
+      }
+    };
+
+    resolveRecordingUrl();
+  }, [call.id, call.recording_url]);
+
+  if (!call.recording_url) return null;
+
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-muted-foreground">Recording</label>
+      {isLoading ? (
+        <Button variant="outline" size="sm" className="w-full" disabled>
+          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          Loading Recording...
+        </Button>
+      ) : resolvedUrl ? (
+        <div className="space-y-2">
+          <audio controls className="w-full">
+            <source src={resolvedUrl} type="audio/mpeg" />
+            Your browser does not support the audio element.
+          </audio>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => downloadRecording(resolvedUrl, `demo-call-${call.id}.mp3`)}
+            className="w-full"
+          >
+            <Play className="h-4 w-4 mr-2" />
+            Download Recording
+          </Button>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">Recording unavailable</p>
+      )}
+    </div>
   );
 }
 
