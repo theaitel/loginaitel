@@ -5,6 +5,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -170,6 +171,7 @@ export default function ClientCalls() {
   const [downloadingRecording, setDownloadingRecording] = useState<string | null>(null);
   const [selectedCallIds, setSelectedCallIds] = useState<Set<string>>(new Set());
   const [isBulkDownloading, setIsBulkDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
 
   // Fetch agents for this client (to get external agent IDs)
   const { data: agents } = useQuery({
@@ -477,16 +479,15 @@ export default function ClientCalls() {
     }
 
     setIsBulkDownloading(true);
+    setDownloadProgress({ current: 0, total: selectedCallsWithRecordings.length });
     let successCount = 0;
     let failCount = 0;
 
-    toast({
-      title: "Starting bulk download",
-      description: `Downloading ${selectedCallsWithRecordings.length} recording(s)...`,
-    });
-
-    for (const call of selectedCallsWithRecordings) {
+    for (let i = 0; i < selectedCallsWithRecordings.length; i++) {
+      const call = selectedCallsWithRecordings[i];
       if (!call.recording_url) continue;
+      
+      setDownloadProgress({ current: i + 1, total: selectedCallsWithRecordings.length });
       
       try {
         const response = await fetch(call.recording_url);
@@ -512,6 +513,7 @@ export default function ClientCalls() {
     }
 
     setIsBulkDownloading(false);
+    setDownloadProgress({ current: 0, total: 0 });
     setSelectedCallIds(new Set());
 
     if (failCount === 0) {
@@ -626,31 +628,49 @@ export default function ClientCalls() {
 
           <TabsContent value="history" className="space-y-4">
             {/* Bulk Actions Bar */}
-            {selectedCallsWithRecordings.length > 0 && (
-              <div className="flex items-center gap-4 p-3 border-2 border-primary/20 bg-primary/5 rounded-md">
-                <span className="text-sm font-medium">
-                  {selectedCallsWithRecordings.length} recording(s) selected
-                </span>
-                <Button
-                  size="sm"
-                  onClick={handleBulkDownload}
-                  disabled={isBulkDownloading}
-                  className="gap-2"
-                >
-                  {isBulkDownloading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <DownloadCloud className="h-4 w-4" />
+            {(selectedCallsWithRecordings.length > 0 || isBulkDownloading) && (
+              <div className="flex flex-col gap-3 p-3 border-2 border-primary/20 bg-primary/5 rounded-md">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium">
+                    {isBulkDownloading 
+                      ? `Downloading ${downloadProgress.current} of ${downloadProgress.total}...`
+                      : `${selectedCallsWithRecordings.length} recording(s) selected`
+                    }
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={handleBulkDownload}
+                    disabled={isBulkDownloading}
+                    className="gap-2"
+                  >
+                    {isBulkDownloading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <DownloadCloud className="h-4 w-4" />
+                    )}
+                    {isBulkDownloading ? "Downloading..." : "Download All"}
+                  </Button>
+                  {!isBulkDownloading && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedCallIds(new Set())}
+                    >
+                      Clear Selection
+                    </Button>
                   )}
-                  Download All
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setSelectedCallIds(new Set())}
-                >
-                  Clear Selection
-                </Button>
+                </div>
+                {isBulkDownloading && downloadProgress.total > 0 && (
+                  <div className="space-y-1">
+                    <Progress 
+                      value={(downloadProgress.current / downloadProgress.total) * 100} 
+                      className="h-2"
+                    />
+                    <p className="text-xs text-muted-foreground text-right">
+                      {Math.round((downloadProgress.current / downloadProgress.total) * 100)}% complete
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
