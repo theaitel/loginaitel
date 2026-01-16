@@ -365,6 +365,7 @@ serve(async (req) => {
 
     // ==========================================
     // CLIENTS WITH STATS - Full admin dashboard view
+    // Admins see full names for client management
     // ==========================================
     if (action === "clients-with-stats") {
       if (userRole !== "admin") {
@@ -405,10 +406,12 @@ serve(async (req) => {
         const agentCount = agents.filter((a: Record<string, unknown>) => a.client_id === profile.user_id).length;
         const callCount = calls.filter((c: Record<string, unknown>) => c.client_id === profile.user_id).length;
 
+        // Admin gets full names for client management purposes
+        // Phone/email still masked as they're PII not needed for daily operations
         return {
           user_id: profile.user_id,
           display_id: maskUuid(profile.user_id as string),
-          display_name: maskFullName(profile.full_name as string),
+          display_name: (profile.full_name as string) || "Unnamed Client",
           display_email: maskEmail(profile.email as string),
           display_phone: maskPhone(profile.phone as string),
           created_at: profile.created_at,
