@@ -34,13 +34,26 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const token = authHeader.replace("Bearer ", "");
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Verify user using getClaims (works with signing-keys)
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    
+    let userId: string;
+    if (claimsError || !claimsData?.claims) {
+      // Fallback to getUser for backward compatibility
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !user) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      userId = user.id;
+    } else {
+      userId = claimsData.claims.sub as string;
     }
+    
+    // Create user object for compatibility
+    const user = { id: userId };
 
     // Check user role - engineers, admins, and clients can use this
     const { data: roleData } = await supabase
