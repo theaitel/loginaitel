@@ -12,27 +12,40 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 // ==========================================
-// DATA MASKING UTILITIES
+// ENCODING & MASKING UTILITIES
+// Encode sensitive data so it's not readable in DevTools but can be decoded in frontend
 // ==========================================
 
-// Mask phone number to show only last 4 digits
+// Base64 encode a string (for network obfuscation)
+function encodeForTransport(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    return "enc:" + btoa(unescape(encodeURIComponent(value)));
+  } catch {
+    return "enc:" + btoa(value);
+  }
+}
+
+// Mask phone number to show only last 4 digits (truly masked, not recoverable)
 function maskPhone(phone: string | null | undefined): string {
   if (!phone) return "****";
   if (phone.length <= 4) return "****";
   return "*".repeat(phone.length - 4) + phone.slice(-4);
 }
 
-// Mask transcript - show only indicator, not full content
-function maskTranscript(transcript: string | null | undefined): string | null {
+// Encode transcript for transport - will be decoded in frontend for display
+function encodeTranscript(transcript: string | null | undefined): string | null {
   if (!transcript) return null;
-  const length = transcript.length;
-  if (length > 100) {
-    return `[Transcript available - ${Math.round(length / 100) * 100}+ characters]`;
-  }
-  return `[Transcript available]`;
+  return encodeForTransport(transcript);
 }
 
-// Mask system prompt - never expose in logs
+// Encode summary for transport
+function encodeSummary(summary: string | null | undefined): string | null {
+  if (!summary) return null;
+  return encodeForTransport(summary);
+}
+
+// Mask system prompt - never expose (keep truly masked)
 function maskSystemPrompt(prompt: string | null | undefined): string | null {
   if (!prompt) return null;
   return "[System prompt configured]";
@@ -44,12 +57,12 @@ function proxyRecordingUrl(url: string | null | undefined, executionId: string):
   return `proxy:recording:${executionId}`;
 }
 
-// Mask execution data for client/admin views
+// Encode/mask execution data for transport (visible in UI after decode, encoded in DevTools)
 function maskExecutionData(execution: Record<string, unknown>, includeRealRecordingUrl = false): Record<string, unknown> {
   const masked = { ...execution };
-  const telephonyData = (execution.telephony_data || {}) as Record<string, unknown>;
+  const telephonyData = { ...(execution.telephony_data || {}) as Record<string, unknown> };
   
-  // Mask phone numbers
+  // Mask phone numbers (truly masked - not recoverable)
   if (telephonyData.to_number) {
     telephonyData.to_number = maskPhone(telephonyData.to_number as string);
   }
@@ -67,9 +80,14 @@ function maskExecutionData(execution: Record<string, unknown>, includeRealRecord
   
   masked.telephony_data = telephonyData;
   
-  // Mask transcript
+  // Encode transcript (base64 for network, decoded in frontend for UI display)
   if (execution.transcript) {
-    masked.transcript = maskTranscript(execution.transcript as string);
+    masked.transcript = encodeTranscript(execution.transcript as string);
+  }
+  
+  // Encode summary
+  if (execution.summary) {
+    masked.summary = encodeSummary(execution.summary as string);
   }
   
   return masked;
