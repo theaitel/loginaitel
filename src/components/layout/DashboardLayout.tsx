@@ -7,6 +7,7 @@ import {
   Bot,
   ClipboardList,
   CreditCard,
+  Tag,
   Phone,
   Settings,
   LogOut,
@@ -60,6 +61,7 @@ const clientNavItems = [
   { icon: Phone, label: "Make Call", href: "/client/make-call" },
   { icon: Phone, label: "Call History", href: "/client/calls" },
   { icon: Phone, label: "Phone Numbers", href: "/client/phone-numbers" },
+  { icon: Tag, label: "Pricing Plans", href: "/client/pricing" },
   { icon: CreditCard, label: "Credits & Billing", href: "/client/billing" },
   { icon: Settings, label: "Settings", href: "/client/settings" },
 ];
