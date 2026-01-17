@@ -56,7 +56,10 @@ serve(async (req) => {
     }
 
     if (!otpRecord) {
-      throw new Error("Invalid or expired OTP");
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired OTP. Please request a new OTP." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Mark OTP as verified
