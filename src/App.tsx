@@ -58,7 +58,6 @@ import AdminPayments from "./pages/admin/AdminPayments";
 import AdminPaymentAnalytics from "./pages/admin/AdminPaymentAnalytics";
 import AdminPackages from "./pages/admin/AdminPackages";
 import AdminSeatSubscriptions from "./pages/admin/AdminSeatSubscriptions";
-import AdminAgentBuilder from "./pages/admin/AdminAgentBuilder";
 
 const queryClient = new QueryClient();
 
@@ -214,14 +213,6 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <AdminSeatSubscriptions />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/agent-builder"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <AdminAgentBuilder />
                 </ProtectedRoute>
               }
             />
