@@ -60,6 +60,25 @@ const ELEVENLABS_VOICES = [
   { id: "onwK4e9ZLuTAKqWW03F9", name: "Daniel", gender: "male", accent: "British" },
 ];
 
+// Helper to get voices including custom/cloned voices from Bolna
+function getVoicesWithCustom(
+  provider: string,
+  currentVoiceId: string,
+  currentVoiceName: string
+) {
+  const baseVoices = provider === "cartesia" ? CARTESIA_VOICES : ELEVENLABS_VOICES;
+  
+  // If current voice is not in the list, add it as a custom voice
+  if (currentVoiceId && !baseVoices.find((v) => v.id === currentVoiceId)) {
+    return [
+      { id: currentVoiceId, name: currentVoiceName || "Custom Voice", gender: "custom", accent: "Custom" },
+      ...baseVoices,
+    ];
+  }
+  
+  return baseVoices;
+}
+
 export interface AudioConfig {
   language: string;
   transcriberProvider: string;
@@ -79,7 +98,9 @@ export function AudioSettings({ value, onChange }: AudioSettingsProps) {
   const selectedLanguage = LANGUAGES.find((l) => l.id === value.language);
   const selectedTranscriber = TRANSCRIBER_OPTIONS.find((t) => t.id === value.transcriberProvider);
   const selectedVoiceProvider = VOICE_OPTIONS.find((v) => v.id === value.voiceProvider);
-  const voices = value.voiceProvider === "cartesia" ? CARTESIA_VOICES : ELEVENLABS_VOICES;
+  
+  // Get voices including any custom voice from Bolna
+  const voices = getVoicesWithCustom(value.voiceProvider, value.voiceId, value.voiceName);
   const selectedVoice = voices.find((v) => v.id === value.voiceId);
 
   const handleLanguageChange = (langId: string) => {

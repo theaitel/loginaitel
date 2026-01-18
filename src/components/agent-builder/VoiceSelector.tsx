@@ -41,13 +41,32 @@ export interface VoiceConfig {
   voiceName: string;
 }
 
+// Helper to get voices including custom/cloned voices
+function getVoicesWithCustom(
+  provider: VoiceProvider,
+  currentVoiceId: string,
+  currentVoiceName: string
+) {
+  const baseVoices = provider === "cartesia" ? CARTESIA_VOICES : ELEVENLABS_VOICES;
+  
+  // If current voice is not in the list, add it as a custom voice
+  if (currentVoiceId && !baseVoices.find((v) => v.id === currentVoiceId)) {
+    return [
+      { id: currentVoiceId, name: currentVoiceName || "Custom Voice", gender: "custom", accent: "Custom" },
+      ...baseVoices,
+    ];
+  }
+  
+  return baseVoices;
+}
+
 interface VoiceSelectorProps {
   value: VoiceConfig;
   onChange: (config: VoiceConfig) => void;
 }
 
 export function VoiceSelector({ value, onChange }: VoiceSelectorProps) {
-  const voices = value.provider === "cartesia" ? CARTESIA_VOICES : ELEVENLABS_VOICES;
+  const voices = getVoicesWithCustom(value.provider, value.voiceId, value.voiceName);
   const selectedVoice = voices.find((v) => v.id === value.voiceId);
 
   return (
