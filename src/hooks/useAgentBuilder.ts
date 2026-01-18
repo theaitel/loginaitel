@@ -378,22 +378,22 @@ export function useAgentBuilder() {
       if (result.error) throw new Error(result.error);
       if (!result.data) return [];
 
-      // Upsert each agent to local database
+      // Upsert each agent to local database - store full Bolna config for conversion later
       for (const agent of result.data) {
+        const bolnaConfig = JSON.parse(JSON.stringify(agent));
+        const upsertData = {
+          external_agent_id: agent.id,
+          agent_name: agent.agent_name,
+          status: agent.agent_status || "processed",
+          current_system_prompt: agent.agent_prompts?.task_1?.system_prompt || null,
+          agent_config: bolnaConfig,
+          synced_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        
         const { error } = await supabase
           .from("aitel_agents")
-          .upsert(
-            {
-              external_agent_id: agent.id,
-              agent_name: agent.agent_name,
-              status: agent.agent_status || "processed",
-              current_system_prompt: agent.agent_prompts?.task_1?.system_prompt || null,
-              agent_config: null, // Will be populated when editing
-              synced_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "external_agent_id" }
-          );
+          .upsert(upsertData, { onConflict: "external_agent_id" });
 
         if (error) {
           console.error("Failed to sync agent:", agent.id, error);
