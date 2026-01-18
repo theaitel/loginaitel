@@ -162,8 +162,86 @@ export default function AdminAgentBuilder() {
     a.agent_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Check if config is in Bolna format (has 'tasks' array)
+  const isBolnaFormat = (cfg: unknown): boolean => {
+    const c = cfg as Record<string, unknown>;
+    return !!(c?.tasks && Array.isArray(c.tasks));
+  };
+
+  // Convert Bolna format config to UI format
+  const convertBolnaToUIFormat = (bolnaConfig: Record<string, unknown>): Partial<AgentFullConfig> => {
+    const result: Partial<AgentFullConfig> = {};
+    
+    const agentPrompts = bolnaConfig.agent_prompts as Record<string, Record<string, string>> | undefined;
+    result.agent = {
+      welcomeMessage: (bolnaConfig.agent_welcome_message as string) || "Hello",
+      systemPrompt: agentPrompts?.task_1?.system_prompt || "",
+    };
+
+    const tasks = bolnaConfig.tasks as Array<Record<string, unknown>>;
+    if (tasks && tasks.length > 0) {
+      const task = tasks[0];
+      const toolsConfig = task.tools_config as Record<string, unknown>;
+      
+      if (toolsConfig) {
+        const llmAgent = toolsConfig.llm_agent as Record<string, unknown>;
+        const llmConfig = llmAgent?.llm_config as Record<string, unknown>;
+        if (llmConfig) {
+          result.llm = {
+            model: (llmConfig.model as string) || "gpt-4.1-nano",
+            provider: (llmConfig.provider as string) || "openai",
+            family: (llmConfig.family as string) || "openai",
+            temperature: (llmConfig.temperature as number) || 0.2,
+            maxTokens: (llmConfig.max_tokens as number) || 450,
+          };
+        }
+
+        const synthConfig = toolsConfig.synthesizer as Record<string, unknown>;
+        const transConfig = toolsConfig.transcriber as Record<string, unknown>;
+        const synthProviderConfig = synthConfig?.provider_config as Record<string, unknown>;
+        
+        result.audio = {
+          language: (transConfig?.language as string) || "en",
+          transcriberProvider: (transConfig?.provider as string) || "elevenlabs",
+          transcriberModel: (transConfig?.model as string) || "scribe_v2_realtime",
+          keywords: (transConfig?.keywords as string) || "",
+          voiceProvider: (synthConfig?.provider as string) || "cartesia",
+          voiceId: (synthProviderConfig?.voice_id as string) || "",
+          voiceName: (synthProviderConfig?.voice as string) || "Custom Voice",
+        };
+
+        const ioConfig = toolsConfig.input as Record<string, unknown>;
+        const taskCfg = task.task_config as Record<string, unknown>;
+        
+        result.call = {
+          telephonyProvider: (ioConfig?.provider as string) || "plivo",
+          enableDtmf: !!(taskCfg?.dtmf_enabled),
+          noiseCancellation: !!(taskCfg?.noise_cancellation_level && (taskCfg.noise_cancellation_level as number) > 0),
+          noiseCancellationLevel: (taskCfg?.noise_cancellation_level as number) || 85,
+          ambientNoise: !!(taskCfg?.ambient_noise),
+          ambientNoiseTrack: (taskCfg?.ambient_noise_track as string) || "office-ambience",
+        };
+
+        result.engine = {
+          preciseTranscript: !!(taskCfg?.generate_precise_transcript),
+          interruptWords: (taskCfg?.number_of_words_for_interruption as number) || 2,
+          responseRate: "rapid",
+        };
+      }
+    }
+    
+    return result;
+  };
+
   const mergeWithDefaults = (partial: unknown): AgentFullConfig => {
-    const p = (partial ?? {}) as Partial<AgentFullConfig>;
+    // Check if this is Bolna format (from synced data) vs UI format
+    let p: Partial<AgentFullConfig>;
+    if (isBolnaFormat(partial)) {
+      p = convertBolnaToUIFormat(partial as Record<string, unknown>);
+    } else {
+      p = (partial ?? {}) as Partial<AgentFullConfig>;
+    }
+    
     return {
       ...DEFAULT_CONFIG,
       ...p,
@@ -189,7 +267,7 @@ export default function AdminAgentBuilder() {
       setAgentName(agent.agent_name);
       setLastUpdated(new Date(agent.updated_at));
 
-      // If we have cached config, use it (but always merge with defaults)
+      // If we have cached config, use it (mergeWithDefaults will handle conversion)
       if (agent.agent_config) {
         setConfig(mergeWithDefaults(agent.agent_config));
         return;
