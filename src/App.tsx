@@ -42,6 +42,7 @@ import DemoCallsPage from "./pages/engineer/DemoCallsPage";
 import EngineerSettings from "./pages/engineer/EngineerSettings";
 import EngineerTimeTracker from "./pages/engineer/EngineerTimeTracker";
 import MakeCallPage from "./pages/shared/MakeCallPage";
+import AICallInsights from "./pages/shared/AICallInsights";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminAgents from "./pages/admin/AdminAgents";
 import AdminCalls from "./pages/admin/AdminCalls";
@@ -213,6 +214,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <AdminSeatSubscriptions />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/ai-insights"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AICallInsights role="admin" />
                 </ProtectedRoute>
               }
             />
@@ -456,6 +465,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["client"]}>
                   <MonitoringDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/client/ai-insights"
+              element={
+                <ProtectedRoute allowedRoles={["client"]}>
+                  <AICallInsights role="client" />
                 </ProtectedRoute>
               }
             />
