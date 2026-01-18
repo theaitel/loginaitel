@@ -248,16 +248,6 @@ export default function AdminAgentBuilder() {
     }
   };
 
-  const calculateCostPerMin = () => {
-    return "$0.039";
-  };
-
-  const costBreakdown = {
-    transcriber: 20,
-    llm: 30,
-    voice: 25,
-    telephony: 25,
-  };
 
   const formatTimeAgo = (date: Date | null) => {
     if (!date) return "Not saved";
@@ -404,54 +394,6 @@ export default function AdminAgentBuilder() {
                         Share
                       </Button>
                     </div>
-                  </div>
-
-                  {/* Cost Indicator */}
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>Cost per min: ~ {calculateCostPerMin()}</span>
-                    </div>
-                    <div className="flex-1 max-w-md">
-                      <div className="h-2 flex rounded-full overflow-hidden">
-                        <div
-                          className="bg-green-500"
-                          style={{ width: `${costBreakdown.transcriber}%` }}
-                        />
-                        <div
-                          className="bg-orange-500"
-                          style={{ width: `${costBreakdown.llm}%` }}
-                        />
-                        <div
-                          className="bg-teal-500"
-                          style={{ width: `${costBreakdown.voice}%` }}
-                        />
-                        <div
-                          className="bg-amber-500"
-                          style={{ width: `${costBreakdown.telephony}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 mt-2 text-xs">
-                    <span className="flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-green-500" />
-                      Transcriber
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-orange-500" />
-                      LLM
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-teal-500" />
-                      Voice
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-amber-500" />
-                      Telephony
-                    </span>
-                    <Badge variant="secondary" className="text-xs">
-                      Platform
-                    </Badge>
                   </div>
                 </div>
 
