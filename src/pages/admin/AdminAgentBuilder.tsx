@@ -4,10 +4,10 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,16 +32,15 @@ import {
   Save,
   Trash2,
   Copy,
-  Share2,
   PhoneCall,
-  MessageCircle,
-  ExternalLink,
   Search,
   Plus,
-  Download,
   Clock,
   RefreshCw,
   Loader2,
+  Bot,
+  Zap,
+  ChevronRight,
 } from "lucide-react";
 
 // Import all settings components
@@ -53,6 +52,7 @@ import { CallSettings, CallConfig } from "@/components/agent-builder/CallSetting
 import { ToolsSettings, ToolsConfig } from "@/components/agent-builder/ToolsSettings";
 import { AnalyticsSettings, AnalyticsConfig } from "@/components/agent-builder/AnalyticsSettings";
 import { InboundSettings, InboundConfig } from "@/components/agent-builder/InboundSettings";
+import { AgentPreviewPanel } from "@/components/agent-builder/AgentPreviewPanel";
 import { useAgentBuilder, AgentFullConfig } from "@/hooks/useAgentBuilder";
 import { TestCallDialog } from "@/components/agent-builder/TestCallDialog";
 
@@ -117,6 +117,18 @@ You are [Agent Name], a representative of [Company Name].`,
   },
 };
 
+// Tab configuration
+const TABS = [
+  { id: "agent", label: "Agent", icon: FileText, description: "Welcome message & prompt" },
+  { id: "llm", label: "LLM", icon: Brain, description: "Model & intelligence" },
+  { id: "audio", label: "Audio", icon: Headphones, description: "Voice & transcription" },
+  { id: "engine", label: "Engine", icon: Cog, description: "Response behavior" },
+  { id: "call", label: "Call", icon: Phone, description: "Telephony settings" },
+  { id: "tools", label: "Tools", icon: Wrench, description: "Function integrations" },
+  { id: "analytics", label: "Analytics", icon: BarChart3, description: "Post-call tasks" },
+  { id: "inbound", label: "Inbound", icon: PhoneIncoming, description: "Incoming call settings" },
+];
+
 export default function AdminAgentBuilder() {
   const navigate = useNavigate();
   const {
@@ -152,7 +164,6 @@ export default function AdminAgentBuilder() {
 
   const mergeWithDefaults = (partial: unknown): AgentFullConfig => {
     const p = (partial ?? {}) as Partial<AgentFullConfig>;
-
     return {
       ...DEFAULT_CONFIG,
       ...p,
@@ -265,15 +276,14 @@ export default function AdminAgentBuilder() {
     }
   };
 
-
   const formatTimeAgo = (date: Date | null) => {
     if (!date) return "Not saved";
     const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
     if (minutes < 1) return "Just now";
-    if (minutes < 60) return `${minutes} min ago`;
+    if (minutes < 60) return `${minutes}m ago`;
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
-    return `${Math.floor(hours / 24)} day${Math.floor(hours / 24) > 1 ? "s" : ""} ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
   };
 
   const isSaving = isCreating || isUpdating;
@@ -289,341 +299,309 @@ export default function AdminAgentBuilder() {
     await stopCall(executionId);
   };
 
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "agent":
+        return <AgentSettings value={config.agent} onChange={(agent) => setConfig({ ...config, agent })} />;
+      case "llm":
+        return <LLMSettingsAdvanced value={config.llm} onChange={(llm) => setConfig({ ...config, llm })} />;
+      case "audio":
+        return <AudioSettings value={config.audio} onChange={(audio) => setConfig({ ...config, audio })} />;
+      case "engine":
+        return <EngineSettings value={config.engine} onChange={(engine) => setConfig({ ...config, engine })} />;
+      case "call":
+        return <CallSettings value={config.call} onChange={(call) => setConfig({ ...config, call })} />;
+      case "tools":
+        return <ToolsSettings value={config.tools} onChange={(tools) => setConfig({ ...config, tools })} />;
+      case "analytics":
+        return <AnalyticsSettings value={config.analytics} onChange={(analytics) => setConfig({ ...config, analytics })} />;
+      case "inbound":
+        return <InboundSettings value={config.inbound} onChange={(inbound) => setConfig({ ...config, inbound })} />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <DashboardLayout role="admin">
-      <div className="h-[calc(100vh-4rem)] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <div>
-            <h1 className="text-2xl font-bold">Agent Setup</h1>
-            <p className="text-sm text-muted-foreground">Fine tune your agents</p>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Sidebar - Agent List */}
-          <div className="w-72 border-r flex flex-col bg-card">
-            <div className="p-4 border-b space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="font-bold">Your Agents</h2>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => syncAgents()}
-                  disabled={isSyncing}
-                  title="Sync from API"
-                >
-                  <RefreshCw className={`h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
-                </Button>
+      <TooltipProvider>
+        <div className="h-[calc(100vh-4rem)] flex flex-col">
+          {/* Compact Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b-2 border-border bg-background">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary text-primary-foreground flex items-center justify-center border-2 border-border shadow-sm">
+                <Bot className="h-5 w-5" />
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="gap-1" disabled>
-                  <Download className="h-3 w-3" />
-                  Import
-                </Button>
-                <Button size="sm" className="gap-1" onClick={handleNewAgent}>
-                  <Plus className="h-3 w-3" />
-                  New Agent
-                </Button>
-              </div>
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search agents..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8"
-                />
+              <div>
+                <h1 className="text-lg font-bold tracking-tight">Agent Studio</h1>
+                <p className="text-xs text-muted-foreground">Build & configure AI voice agents</p>
               </div>
             </div>
-
-            <ScrollArea className="flex-1">
-              <div className="p-2 space-y-1">
-                {isLoadingAgents ? (
-                  <div className="space-y-2 p-2">
-                    {[1, 2, 3].map((i) => (
-                      <Skeleton key={i} className="h-10 w-full" />
-                    ))}
-                  </div>
-                ) : filteredAgents.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center p-4">
-                    {searchQuery ? "No agents found" : "No agents yet. Create one!"}
-                  </p>
-                ) : (
-                  filteredAgents.map((agent) => (
-                    <button
-                      key={agent.id}
-                      onClick={() => {
-                        setSelectedAgentId(agent.id);
-                        setIsNewAgent(false);
-                      }}
-                      className={`w-full text-left px-3 py-2.5 text-sm transition-colors rounded ${
-                        selectedAgentId === agent.id && !isNewAgent
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "hover:bg-muted"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="truncate">{agent.agent_name}</span>
-                        <Badge
-                          variant={agent.status === "active" ? "default" : "secondary"}
-                          className="text-[10px] ml-2"
-                        >
-                          {agent.status}
-                        </Badge>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => syncAgents()}
+                disabled={isSyncing}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-3 w-3 ${isSyncing ? "animate-spin" : ""}`} />
+                Sync
+              </Button>
+              <Button size="sm" onClick={handleNewAgent} className="gap-2">
+                <Plus className="h-3 w-3" />
+                New Agent
+              </Button>
+            </div>
           </div>
 
-          {/* Main Editor Area */}
+          {/* Main 3-Panel Layout */}
           <div className="flex-1 flex overflow-hidden">
-            {/* Center - Configuration */}
-            <div className="flex-1 overflow-auto">
-              <div className="p-6">
-                {/* Agent Header */}
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <Input
-                      value={agentName}
-                      onChange={(e) => setAgentName(e.target.value)}
-                      className="text-2xl font-bold border-none p-0 h-auto focus-visible:ring-0 bg-transparent max-w-md"
-                      placeholder="Agent Name"
-                    />
-                    <div className="flex items-center gap-2">
-                      {!isNewAgent && selectedAgent && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1"
-                          onClick={handleCopyAgentId}
-                        >
-                          <Copy className="h-3 w-3" />
-                          Agent ID
-                        </Button>
-                      )}
-                      <Button variant="outline" size="sm" className="gap-1" disabled>
-                        <Share2 className="h-3 w-3" />
-                        Share
+            {/* LEFT PANEL: Agent List */}
+            <div className="w-64 border-r-2 border-border flex flex-col bg-background">
+              {/* Search */}
+              <div className="p-3 border-b border-border">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search agents..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8 h-9 text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Agent List */}
+              <ScrollArea className="flex-1">
+                <div className="p-2 space-y-1">
+                  {isLoadingAgents ? (
+                    <div className="space-y-2 p-2">
+                      {[1, 2, 3].map((i) => (
+                        <Skeleton key={i} className="h-14 w-full" />
+                      ))}
+                    </div>
+                  ) : filteredAgents.length === 0 ? (
+                    <div className="text-center p-6">
+                      <Bot className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" />
+                      <p className="text-sm text-muted-foreground">
+                        {searchQuery ? "No agents found" : "No agents yet"}
+                      </p>
+                      <Button size="sm" variant="outline" className="mt-3" onClick={handleNewAgent}>
+                        Create First Agent
                       </Button>
                     </div>
-                  </div>
-                </div>
-
-                {/* Loading State */}
-                {isLoadingDetails ? (
-                  <div className="flex items-center justify-center h-64">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  /* Tabs */
-                  <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className="grid grid-cols-8 w-full mb-6">
-                      <TabsTrigger value="agent" className="gap-1 text-xs">
-                        <FileText className="h-3 w-3" />
-                        Agent
-                      </TabsTrigger>
-                      <TabsTrigger value="llm" className="gap-1 text-xs">
-                        <Brain className="h-3 w-3" />
-                        LLM
-                      </TabsTrigger>
-                      <TabsTrigger value="audio" className="gap-1 text-xs">
-                        <Headphones className="h-3 w-3" />
-                        Audio
-                      </TabsTrigger>
-                      <TabsTrigger value="engine" className="gap-1 text-xs">
-                        <Cog className="h-3 w-3" />
-                        Engine
-                      </TabsTrigger>
-                      <TabsTrigger value="call" className="gap-1 text-xs">
-                        <Phone className="h-3 w-3" />
-                        Call
-                      </TabsTrigger>
-                      <TabsTrigger value="tools" className="gap-1 text-xs">
-                        <Wrench className="h-3 w-3" />
-                        Tools
-                      </TabsTrigger>
-                      <TabsTrigger value="analytics" className="gap-1 text-xs">
-                        <BarChart3 className="h-3 w-3" />
-                        Analytics
-                      </TabsTrigger>
-                      <TabsTrigger value="inbound" className="gap-1 text-xs">
-                        <PhoneIncoming className="h-3 w-3" />
-                        Inbound
-                      </TabsTrigger>
-                    </TabsList>
-
-                    <Card className="p-6">
-                      <TabsContent value="agent" className="m-0">
-                        <AgentSettings
-                          value={config.agent}
-                          onChange={(agent) => setConfig({ ...config, agent })}
-                        />
-                      </TabsContent>
-                      <TabsContent value="llm" className="m-0">
-                        <LLMSettingsAdvanced
-                          value={config.llm}
-                          onChange={(llm) => setConfig({ ...config, llm })}
-                        />
-                      </TabsContent>
-                      <TabsContent value="audio" className="m-0">
-                        <AudioSettings
-                          value={config.audio}
-                          onChange={(audio) => setConfig({ ...config, audio })}
-                        />
-                      </TabsContent>
-                      <TabsContent value="engine" className="m-0">
-                        <EngineSettings
-                          value={config.engine}
-                          onChange={(engine) => setConfig({ ...config, engine })}
-                        />
-                      </TabsContent>
-                      <TabsContent value="call" className="m-0">
-                        <CallSettings
-                          value={config.call}
-                          onChange={(call) => setConfig({ ...config, call })}
-                        />
-                      </TabsContent>
-                      <TabsContent value="tools" className="m-0">
-                        <ToolsSettings
-                          value={config.tools}
-                          onChange={(tools) => setConfig({ ...config, tools })}
-                        />
-                      </TabsContent>
-                      <TabsContent value="analytics" className="m-0">
-                        <AnalyticsSettings
-                          value={config.analytics}
-                          onChange={(analytics) => setConfig({ ...config, analytics })}
-                        />
-                      </TabsContent>
-                      <TabsContent value="inbound" className="m-0">
-                        <InboundSettings
-                          value={config.inbound}
-                          onChange={(inbound) => setConfig({ ...config, inbound })}
-                        />
-                      </TabsContent>
-                    </Card>
-                  </Tabs>
-                )}
-              </div>
-            </div>
-
-            {/* Right Sidebar - Actions */}
-            <div className="w-72 border-l bg-card p-4 space-y-4">
-              <Button variant="outline" className="w-full gap-2" disabled>
-                <ExternalLink className="h-4 w-4" />
-                See all call logs
-              </Button>
-
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <Button
-                    className="flex-1 gap-2"
-                    onClick={handleSave}
-                    disabled={isSaving || isLoadingDetails}
-                  >
-                    {isSaving ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="h-4 w-4" />
-                    )}
-                    {isSaving ? "Saving..." : isNewAgent ? "Create agent" : "Save agent"}
-                  </Button>
-
-                  {!isNewAgent && selectedAgent && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="icon" disabled={isDeleting}>
-                          {isDeleting ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Agent</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete "{selectedAgent.agent_name}"? This action
-                            cannot be undone and will remove the agent from both the system and API.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={handleDeleteAgent}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  ) : (
+                    filteredAgents.map((agent) => (
+                      <button
+                        key={agent.id}
+                        onClick={() => {
+                          setSelectedAgentId(agent.id);
+                          setIsNewAgent(false);
+                        }}
+                        className={`w-full text-left p-3 transition-all border-2 group ${
+                          selectedAgentId === agent.id && !isNewAgent
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "border-transparent hover:border-border hover:bg-muted/50"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm truncate">{agent.agent_name}</span>
+                            </div>
+                            <p className={`text-xs mt-0.5 truncate ${
+                              selectedAgentId === agent.id && !isNewAgent
+                                ? "text-primary-foreground/70"
+                                : "text-muted-foreground"
+                            }`}>
+                              {agent.external_agent_id.slice(0, 8)}...
+                            </p>
+                          </div>
+                          <Badge
+                            variant={agent.status === "active" || agent.status === "processed" ? "default" : "secondary"}
+                            className={`text-[9px] shrink-0 ${
+                              selectedAgentId === agent.id && !isNewAgent
+                                ? "bg-primary-foreground text-primary"
+                                : ""
+                            }`}
                           >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                            {agent.status === "processed" ? "ready" : agent.status}
+                          </Badge>
+                        </div>
+                      </button>
+                    ))
                   )}
                 </div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Clock className="h-3 w-3" />
-                  {isNewAgent ? "Not saved yet" : `Last updated ${formatTimeAgo(lastUpdated)}`}
+              </ScrollArea>
+            </div>
+
+            {/* CENTER PANEL: Editor */}
+            <div className="flex-1 flex overflow-hidden">
+              {/* Vertical Tab Bar */}
+              <div className="w-16 border-r border-border bg-muted/30 flex flex-col py-2">
+                {TABS.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <Tooltip key={tab.id} delayDuration={100}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setActiveTab(tab.id)}
+                          className={`w-full py-3 flex flex-col items-center gap-1 transition-all relative ${
+                            isActive
+                              ? "bg-background text-primary"
+                              : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                          }`}
+                        >
+                          {isActive && (
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary" />
+                          )}
+                          <Icon className="h-4 w-4" />
+                          <span className="text-[10px] font-medium">{tab.label}</span>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="font-medium">
+                        <p>{tab.label}</p>
+                        <p className="text-xs text-muted-foreground">{tab.description}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+
+              {/* Editor Content */}
+              <div className="flex-1 overflow-auto bg-background">
+                <div className="p-6 max-w-4xl">
+                  {/* Agent Header */}
+                  <div className="mb-6 pb-4 border-b border-border">
+                    <div className="flex items-center gap-4 mb-3">
+                      <div className="w-12 h-12 bg-muted border-2 border-border flex items-center justify-center">
+                        <Bot className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1">
+                        <Input
+                          value={agentName}
+                          onChange={(e) => setAgentName(e.target.value)}
+                          className="text-xl font-bold border-none p-0 h-auto focus-visible:ring-0 bg-transparent"
+                          placeholder="Agent Name"
+                        />
+                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {isNewAgent ? "Unsaved" : formatTimeAgo(lastUpdated)}
+                          </span>
+                          {!isNewAgent && selectedAgent && (
+                            <button 
+                              onClick={handleCopyAgentId}
+                              className="flex items-center gap-1 hover:text-foreground transition-colors"
+                            >
+                              <Copy className="h-3 w-3" />
+                              Copy ID
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          onClick={handleSave}
+                          disabled={isSaving || isLoadingDetails}
+                          className="gap-2 shadow-sm"
+                        >
+                          {isSaving ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Save className="h-4 w-4" />
+                          )}
+                          {isSaving ? "Saving..." : isNewAgent ? "Create" : "Save"}
+                        </Button>
+                        
+                        {!isNewAgent && selectedAgent && (
+                          <>
+                            <Button
+                              variant="outline"
+                              onClick={() => setIsTestCallDialogOpen(true)}
+                              className="gap-2"
+                            >
+                              <PhoneCall className="h-4 w-4" />
+                              Test Call
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="icon" disabled={isDeleting}>
+                                  {isDeleting ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Agent</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete "{selectedAgent.agent_name}"? This action
+                                    cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={handleDeleteAgent}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tab Content */}
+                  {isLoadingDetails ? (
+                    <div className="flex items-center justify-center h-64">
+                      <div className="text-center">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-3" />
+                        <p className="text-sm text-muted-foreground">Loading agent configuration...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <Card className="p-6 border-2 shadow-sm animate-fade-in">
+                      {renderTabContent()}
+                    </Card>
+                  )}
                 </div>
               </div>
+            </div>
 
-              <div className="border-t pt-4 space-y-3">
-                <Button variant="outline" className="w-full gap-2 text-primary border-primary" disabled>
-                  <MessageCircle className="h-4 w-4" />
-                  Chat with agent
-                </Button>
-                <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
-                  💡 Chat is the fastest way to test and refine the agent.
-                </p>
-              </div>
-
-              <div className="border-t pt-4 space-y-3">
-                <Button 
-                  variant="outline" 
-                  className="w-full gap-2"
-                  onClick={() => setIsTestCallDialogOpen(true)}
-                  disabled={isNewAgent || !selectedAgent}
-                >
-                  <PhoneCall className="h-4 w-4" />
-                  Test via phone call
-                </Button>
-                <p className="text-xs text-muted-foreground text-center">
-                  Test your agent with a real phone call
-                </p>
-              </div>
-
-              <div className="border-t pt-4 space-y-2">
-                <Button className="w-full gap-2" variant="default" disabled>
-                  <PhoneCall className="h-4 w-4" />
-                  Get call from agent
-                </Button>
-                <Button variant="outline" className="w-full gap-2" disabled>
-                  <PhoneIncoming className="h-4 w-4" />
-                  Set inbound agent
-                </Button>
-              </div>
+            {/* RIGHT PANEL: Live Preview */}
+            <div className="w-80 border-l-2 border-border">
+              <AgentPreviewPanel
+                config={config}
+                agentName={agentName}
+                isNewAgent={isNewAgent}
+              />
             </div>
           </div>
-        </div>
 
-        {/* Test Call Dialog */}
-        {selectedAgent && (
-          <TestCallDialog
-            open={isTestCallDialogOpen}
-            onOpenChange={setIsTestCallDialogOpen}
-            agentName={selectedAgent.agent_name}
-            agentId={selectedAgent.id}
-            externalAgentId={selectedAgent.external_agent_id}
-            onTestCall={handleTestCall}
-            onStopCall={handleStopCall}
-          />
-        )}
-      </div>
+          {/* Test Call Dialog */}
+          {selectedAgent && (
+            <TestCallDialog
+              open={isTestCallDialogOpen}
+              onOpenChange={setIsTestCallDialogOpen}
+              agentName={selectedAgent.agent_name}
+              agentId={selectedAgent.id}
+              externalAgentId={selectedAgent.external_agent_id}
+              onTestCall={handleTestCall}
+              onStopCall={handleStopCall}
+            />
+          )}
+        </div>
+      </TooltipProvider>
     </DashboardLayout>
   );
 }
