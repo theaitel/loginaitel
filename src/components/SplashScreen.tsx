@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -7,21 +7,14 @@ interface SplashScreenProps {
 
 export const SplashScreen = ({ onComplete, duration = 2000 }: SplashScreenProps) => {
   const [isExiting, setIsExiting] = useState(false);
-  const hasCompleted = useRef(false);
 
   useEffect(() => {
-    // Prevent double execution
-    if (hasCompleted.current) return;
-
     const exitTimer = setTimeout(() => {
       setIsExiting(true);
     }, duration - 500);
 
     const completeTimer = setTimeout(() => {
-      if (!hasCompleted.current) {
-        hasCompleted.current = true;
-        onComplete();
-      }
+      onComplete();
     }, duration);
 
     return () => {

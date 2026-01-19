@@ -13,19 +13,26 @@ import {
 } from "lucide-react";
 
 export default function Landing() {
-  const [showSplash, setShowSplash] = useState(() => {
-    // Check if user has seen splash in this session immediately
-    const seen = sessionStorage.getItem("splash-seen");
-    return !seen;
-  });
+  const [showSplash, setShowSplash] = useState(true);
+  const [hasSeenSplash, setHasSeenSplash] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if user has seen splash in this session
+    const seen = sessionStorage.getItem("splash-seen");
+    if (seen) {
+      setShowSplash(false);
+      setHasSeenSplash(true);
+    }
+  }, []);
 
   const handleSplashComplete = () => {
     setShowSplash(false);
+    setHasSeenSplash(true);
     sessionStorage.setItem("splash-seen", "true");
   };
 
-  if (showSplash) {
+  if (showSplash && !hasSeenSplash) {
     return <SplashScreen onComplete={handleSplashComplete} duration={2500} />;
   }
 

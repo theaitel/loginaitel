@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { InstallPromptBanner } from "@/components/pwa/InstallPromptBanner";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 import Install from "./pages/Install";
@@ -43,7 +42,6 @@ import DemoCallsPage from "./pages/engineer/DemoCallsPage";
 import EngineerSettings from "./pages/engineer/EngineerSettings";
 import EngineerTimeTracker from "./pages/engineer/EngineerTimeTracker";
 import MakeCallPage from "./pages/shared/MakeCallPage";
-import AICallInsights from "./pages/shared/AICallInsights";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminAgents from "./pages/admin/AdminAgents";
 import AdminCalls from "./pages/admin/AdminCalls";
@@ -215,16 +213,6 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <AdminSeatSubscriptions />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/ai-insights"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <ErrorBoundary title="AI Insights failed to load">
-                    <AICallInsights role="admin" />
-                  </ErrorBoundary>
                 </ProtectedRoute>
               }
             />
@@ -468,16 +456,6 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["client"]}>
                   <MonitoringDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/client/ai-insights"
-              element={
-                <ProtectedRoute allowedRoles={["client"]}>
-                  <ErrorBoundary title="AI Insights failed to load">
-                    <AICallInsights role="client" />
-                  </ErrorBoundary>
                 </ProtectedRoute>
               }
             />

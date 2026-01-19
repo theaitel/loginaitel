@@ -24,7 +24,6 @@ import {
   Headphones,
   UserCheck,
   Monitor,
-  Brain,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,7 +41,6 @@ const adminNavItems = [
   { icon: Users, label: "Clients", href: "/admin/clients" },
   { icon: ClipboardList, label: "Tasks", href: "/admin/tasks" },
   { icon: Bot, label: "Agents", href: "/admin/agents" },
-  { icon: Brain, label: "AI Insights", href: "/admin/ai-insights" },
   { icon: Phone, label: "Make Call", href: "/admin/make-call" },
   { icon: Phone, label: "Calls", href: "/admin/calls" },
   { icon: Phone, label: "Phone Numbers", href: "/admin/phone-numbers" },
@@ -68,7 +66,6 @@ const clientNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/client" },
   { icon: Megaphone, label: "Campaigns", href: "/client/campaigns" },
   { icon: Bot, label: "My Agents", href: "/client/agents" },
-  { icon: Brain, label: "AI Insights", href: "/client/ai-insights" },
   { icon: Phone, label: "Make Call", href: "/client/make-call" },
   { icon: Phone, label: "Call History", href: "/client/calls" },
   { icon: Phone, label: "Phone Numbers", href: "/client/phone-numbers" },
