@@ -34,13 +34,15 @@ export default function Landing() {
       {/* Header */}
       <header className="p-6 flex items-center justify-between animate-fade-in">
         <div className="flex items-center gap-3">
-          <img src="/logo.jpg" alt="Aitel" className="h-10 w-10 rounded-xl shadow-sm" />
+          <div className="status-pulse">
+            <img src="/logo.jpg" alt="Aitel" className="h-10 w-10 rounded-xl" />
+          </div>
           <div>
             <h1 className="font-bold text-lg leading-tight">Aitel</h1>
             <p className="text-xs text-muted-foreground">Telecalling Console</p>
           </div>
         </div>
-        <DownloadButton size="sm" variant="outline" />
+        <DownloadButton size="sm" variant="outline" className="btn-tactile border-2" />
       </header>
 
       {/* Main Content */}
@@ -64,14 +66,14 @@ export default function Landing() {
           <Link to="/login/admin" className="block">
             <Button
               variant="outline"
-              className="w-full h-16 justify-between text-left px-5 hover:bg-accent/50 transition-all group"
+              className="w-full h-20 justify-between text-left px-5 card-tactile bg-card group"
             >
               <div className="flex items-center gap-4">
-                <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  <Settings className="h-5 w-5" />
+                <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors border-2 border-transparent group-hover:border-primary">
+                  <Settings className="h-6 w-6" />
                 </div>
                 <div>
-                  <div className="font-semibold">Admin Portal</div>
+                  <div className="font-bold text-base">Admin Portal</div>
                   <div className="text-xs text-muted-foreground">Platform management</div>
                 </div>
               </div>
@@ -82,14 +84,14 @@ export default function Landing() {
           <Link to="/login/engineer" className="block">
             <Button
               variant="outline"
-              className="w-full h-16 justify-between text-left px-5 hover:bg-accent/50 transition-all group"
+              className="w-full h-20 justify-between text-left px-5 card-tactile bg-card group"
             >
               <div className="flex items-center gap-4">
-                <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  <Users className="h-5 w-5" />
+                <div className="p-2 rounded-lg bg-chart-1/10 text-chart-1 group-hover:bg-chart-1 group-hover:text-white transition-colors border-2 border-transparent group-hover:border-chart-1">
+                  <Users className="h-6 w-6" />
                 </div>
                 <div>
-                  <div className="font-semibold">Engineer Portal</div>
+                  <div className="font-bold text-base">Engineer Portal</div>
                   <div className="text-xs text-muted-foreground">Build voice agents</div>
                 </div>
               </div>
@@ -100,14 +102,14 @@ export default function Landing() {
           <Link to="/login/client" className="block">
             <Button
               variant="outline"
-              className="w-full h-16 justify-between text-left px-5 hover:bg-accent/50 transition-all group"
+              className="w-full h-20 justify-between text-left px-5 card-tactile bg-card group"
             >
               <div className="flex items-center gap-4">
-                <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  <Phone className="h-5 w-5" />
+                <div className="p-2 rounded-lg bg-chart-2/10 text-chart-2 group-hover:bg-chart-2 group-hover:text-white transition-colors border-2 border-transparent group-hover:border-chart-2">
+                  <Phone className="h-6 w-6" />
                 </div>
                 <div>
-                  <div className="font-semibold">Client Portal</div>
+                  <div className="font-bold text-base">Client Portal</div>
                   <div className="text-xs text-muted-foreground">Manage campaigns</div>
                 </div>
               </div>
@@ -116,12 +118,11 @@ export default function Landing() {
           </Link>
         </div>
 
-        {/* Get Started Button */}
         <div className="mt-8 animate-fade-in" style={{ animationDelay: "0.3s" }}>
           <Link to="/login">
-            <Button size="lg" className="px-8 shadow-md hover:shadow-lg transition-shadow">
+            <Button size="lg" className="px-10 h-14 text-lg btn-tactile shadow-none border-2">
               Get Started
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <ArrowRight className="ml-2 h-6 w-6" />
             </Button>
           </Link>
         </div>
