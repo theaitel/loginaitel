@@ -235,7 +235,7 @@ export default function AdminAgents() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-accent border-2 border-border">
+            <div className="status-pulse">
               <Bot className="h-6 w-6" />
             </div>
             <div>
@@ -268,25 +268,25 @@ export default function AdminAgents() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="border-2 border-border bg-card p-4">
+          <div className="card-tactile bg-card p-4">
             <p className="text-sm text-muted-foreground">Total Agents</p>
             <p className="text-2xl font-bold">{syncedAgents?.length || 0}</p>
           </div>
-          <div className="border-2 border-border bg-card p-4">
+          <div className="card-tactile bg-card p-4">
             <p className="text-sm text-muted-foreground">Assigned</p>
-            <p className="text-2xl font-bold">
+            <p className="text-2xl font-bold text-chart-2">
               {syncedAgents?.filter((a) => a.client_id).length || 0}
             </p>
           </div>
-          <div className="border-2 border-border bg-card p-4">
+          <div className="card-tactile bg-card p-4">
             <p className="text-sm text-muted-foreground">Unassigned</p>
-            <p className="text-2xl font-bold">
+            <p className="text-2xl font-bold text-chart-5">
               {syncedAgents?.filter((a) => !a.client_id).length || 0}
             </p>
           </div>
-          <div className="border-2 border-border bg-card p-4">
+          <div className="card-tactile bg-card p-4">
             <p className="text-sm text-muted-foreground">Active Clients</p>
-            <p className="text-2xl font-bold">{clients?.length || 0}</p>
+            <p className="text-2xl font-bold text-chart-1">{clients?.length || 0}</p>
           </div>
         </div>
 
@@ -349,7 +349,7 @@ export default function AdminAgents() {
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={agent.status === "active" ? "default" : "secondary"}
+                        className={agent.status === "active" ? "bg-chart-2/10 text-chart-2 border-chart-2" : "bg-muted text-muted-foreground"}
                       >
                         {agent.status}
                       </Badge>

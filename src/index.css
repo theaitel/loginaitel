@@ -156,6 +156,62 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+  }
+
+  /* Neo-Brutalist Global Component Refinements */
+  button, .btn {
+    @apply transition-all duration-150 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none bg-background;
+    box-shadow: var(--shadow-xs);
+  }
+
+  [class*="bg-card"], .card {
+    @apply transition-all duration-200 hover:translate-x-[-2px] hover:translate-y-[-2px];
+    box-shadow: var(--shadow-xs);
+  }
+
+  [class*="bg-card"]:hover, .card:hover {
+    box-shadow: var(--shadow-sm);
+  }
+}
+
+@layer utilities {
+  .btn-tactile {
+    @apply active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all duration-75;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .card-tactile {
+    @apply transition-all duration-300 hover:translate-x-[-4px] hover:translate-y-[-4px];
+    box-shadow: var(--shadow-sm);
+  }
+
+  .card-tactile:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  .status-pulse {
+    @apply relative;
+  }
+
+  .status-pulse::after {
+    content: '';
+    @apply absolute inset-0 rounded-full animate-status-pulse opacity-75;
+    box-shadow: 0 0 8px currentColor;
+  }
+
+  .editor-view {
+    @apply font-mono bg-[#0a0a0a] text-[#e0e0e0] border-2 border-primary p-4 leading-relaxed;
+    box-shadow: var(--shadow-sm);
+  }
+
+  @keyframes status-pulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.2); opacity: 0.4; }
+    100% { transform: scale(1); opacity: 0.8; }
+  }
+
+  .animate-status-pulse {
+    animation: status-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 }

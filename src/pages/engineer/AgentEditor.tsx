@@ -148,7 +148,7 @@ export default function AgentEditor() {
 
       // Update in Aitel (use updateAitelAgentPrompt which fetches current config)
       const { error: aitelError } = await updateAitelAgentPrompt(
-        agent.external_agent_id, 
+        agent.external_agent_id,
         systemPrompt
       );
 
@@ -422,29 +422,42 @@ export default function AgentEditor() {
         </div>
 
         {/* System Prompt Editor */}
-        <div className="border-2 border-border bg-card p-6">
+        <div className="card-tactile bg-card p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold">System Prompt</h2>
+            <h2 className="font-bold flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-primary" />
+              System Prompt Workbench
+            </h2>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleReset}
+              className="hover:bg-accent"
               disabled={systemPrompt === agent.original_system_prompt || isAwaitingPromptReview || isDemoSubmitted}
             >
               <RotateCcw className="h-4 w-4 mr-2" />
-              Reset to Original
+              Revert to Baseline
             </Button>
           </div>
-          <Textarea
-            placeholder="Enter the system prompt for this agent..."
-            className="min-h-[300px] border-2 font-mono text-sm"
-            value={systemPrompt}
-            onChange={(e) => setSystemPrompt(e.target.value)}
-            disabled={isAwaitingPromptReview || isDemoSubmitted}
-          />
-          <p className="text-xs text-muted-foreground mt-2">
-            {systemPrompt.length} characters
-          </p>
+          <div className="editor-view">
+            <Textarea
+              placeholder="Inject system identity instructions..."
+              className="min-h-[400px] bg-transparent border-none focus-visible:ring-0 text-inherit font-mono resize-none leading-relaxed"
+              value={systemPrompt}
+              onChange={(e) => setSystemPrompt(e.target.value)}
+              disabled={isAwaitingPromptReview || isDemoSubmitted}
+            />
+          </div>
+          <div className="flex justify-between items-center mt-3">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">
+              Tokens: ~{Math.ceil(systemPrompt.length / 4)} | Chars: {systemPrompt.length}
+            </p>
+            {hasChanges && (
+              <Badge variant="outline" className="animate-pulse border-chart-4 text-chart-4 text-[10px]">
+                PENDING SAVE
+              </Badge>
+            )}
+          </div>
         </div>
 
         {/* Original Prompt Reference */}

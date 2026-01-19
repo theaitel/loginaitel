@@ -209,9 +209,8 @@ export default function AdminRealTimeMonitor() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <div className="relative">
+              <div className="status-pulse">
                 <Radio className="h-8 w-8 text-chart-2" />
-                <span className="absolute -top-1 -right-1 h-3 w-3 bg-chart-2 rounded-full animate-pulse" />
               </div>
               <h1 className="text-3xl font-bold">Real-Time Monitor</h1>
             </div>
@@ -259,13 +258,13 @@ export default function AdminRealTimeMonitor() {
 
         {/* Today's Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
-          <div className="border-2 border-border bg-card p-4 text-center">
+          <div className="card-tactile bg-card p-4 text-center">
             <p className="text-2xl font-bold">{todayStats?.total || 0}</p>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">
               Today's Calls
             </p>
           </div>
-          <div className="border-2 border-chart-4 bg-chart-4/5 p-4 text-center">
+          <div className="card-tactile border-2 border-chart-4 bg-chart-4/5 p-4 text-center">
             <p className="text-2xl font-bold text-chart-4">
               {todayStats?.inProgress || 0}
             </p>
@@ -273,7 +272,7 @@ export default function AdminRealTimeMonitor() {
               In Progress
             </p>
           </div>
-          <div className="border-2 border-chart-2 bg-chart-2/5 p-4 text-center">
+          <div className="card-tactile border-2 border-chart-2 bg-chart-2/5 p-4 text-center">
             <p className="text-2xl font-bold text-chart-2">
               {todayStats?.completed || 0}
             </p>
@@ -281,7 +280,7 @@ export default function AdminRealTimeMonitor() {
               Completed
             </p>
           </div>
-          <div className="border-2 border-chart-1 bg-chart-1/5 p-4 text-center">
+          <div className="card-tactile border-2 border-chart-1 bg-chart-1/5 p-4 text-center">
             <p className="text-2xl font-bold text-chart-1">
               {todayStats?.connected || 0}
             </p>
@@ -289,7 +288,7 @@ export default function AdminRealTimeMonitor() {
               Connected
             </p>
           </div>
-          <div className="border-2 border-destructive bg-destructive/5 p-4 text-center">
+          <div className="card-tactile border-2 border-destructive bg-destructive/5 p-4 text-center">
             <p className="text-2xl font-bold text-destructive">
               {todayStats?.failed || 0}
             </p>
@@ -297,7 +296,7 @@ export default function AdminRealTimeMonitor() {
               Failed
             </p>
           </div>
-          <div className="border-2 border-border bg-card p-4 text-center">
+          <div className="card-tactile bg-card p-4 text-center">
             <p className="text-2xl font-bold">
               {todayStats?.connectionRate || 0}%
             </p>
@@ -305,7 +304,7 @@ export default function AdminRealTimeMonitor() {
               Connection Rate
             </p>
           </div>
-          <div className="border-2 border-border bg-card p-4 text-center">
+          <div className="card-tactile bg-card p-4 text-center">
             <p className="text-2xl font-bold font-mono">
               {formatDuration(todayStats?.avgDuration || 0)}
             </p>
@@ -337,8 +336,8 @@ export default function AdminRealTimeMonitor() {
                   <Phone className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
                   <p className="text-muted-foreground">No active calls</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {clientFilter !== "all" 
-                      ? "No active calls for this client" 
+                    {clientFilter !== "all"
+                      ? "No active calls for this client"
                       : "Calls will appear here in real-time"}
                   </p>
                 </div>
@@ -366,7 +365,7 @@ export default function AdminRealTimeMonitor() {
                           </div>
                           <div className="flex items-center gap-2">
                             <span
-                              className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium border-2 ${status.className}`}
+                              className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium border-2 ${status.className} ${status.pulse ? "status-pulse" : ""}`}
                             >
                               <StatusIcon className="h-3 w-3" />
                               {status.label}
@@ -422,8 +421,8 @@ export default function AdminRealTimeMonitor() {
                   <Radio className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
                   <p className="text-muted-foreground">Waiting for events...</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {clientFilter !== "all" 
-                      ? "No events for this client yet" 
+                    {clientFilter !== "all"
+                      ? "No events for this client yet"
                       : "Call updates will appear here in real-time"}
                   </p>
                 </div>
@@ -443,20 +442,19 @@ export default function AdminRealTimeMonitor() {
                         <div className="flex items-start justify-between mb-1">
                           <div className="flex items-center gap-2">
                             <span
-                              className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium border-2 ${status.className}`}
+                              className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium border-2 ${status.className} ${status.pulse ? "status-pulse" : ""}`}
                             >
                               <StatusIcon className="h-3 w-3" />
                               {status.label}
                             </span>
                             <Badge
                               variant="outline"
-                              className={`text-xs ${
-                                event.type === "INSERT"
-                                  ? "border-chart-2 text-chart-2"
-                                  : event.type === "UPDATE"
+                              className={`text-xs ${event.type === "INSERT"
+                                ? "border-chart-2 text-chart-2"
+                                : event.type === "UPDATE"
                                   ? "border-chart-4 text-chart-4"
                                   : "border-destructive text-destructive"
-                              }`}
+                                }`}
                             >
                               {event.type}
                             </Badge>
@@ -495,9 +493,8 @@ export default function AdminRealTimeMonitor() {
 
         {/* Connection Status Indicator */}
         <div className="fixed bottom-4 right-4 flex items-center gap-2 bg-card border-2 border-border px-4 py-2 shadow-md">
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chart-2 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-chart-2"></span>
+          <span className="status-pulse flex h-3 w-3 text-chart-2">
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-current"></span>
           </span>
           <span className="text-sm font-medium">Live</span>
         </div>
