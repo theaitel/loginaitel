@@ -246,6 +246,10 @@ export default function AdminAgents() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button onClick={() => window.location.href = '/admin/create-agent'}>
+              <Bot className="h-4 w-4 mr-2" />
+              Create Agent
+            </Button>
             <Button variant="outline" onClick={() => setEngineerAssignOpen(true)}>
               <Wrench className="h-4 w-4 mr-2" />
               Assign to Engineers

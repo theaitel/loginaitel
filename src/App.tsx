@@ -60,6 +60,7 @@ import AdminPayments from "./pages/admin/AdminPayments";
 import AdminPaymentAnalytics from "./pages/admin/AdminPaymentAnalytics";
 import AdminPackages from "./pages/admin/AdminPackages";
 import AdminSeatSubscriptions from "./pages/admin/AdminSeatSubscriptions";
+import AdminAgentCreator from "./pages/admin/AdminAgentCreator";
 
 const queryClient = new QueryClient();
 
@@ -74,13 +75,13 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/install" element={<Install />} />
-            
+
             {/* Auth Routes */}
             <Route path="/login" element={<LoginSelect />} />
             <Route path="/login/admin" element={<AdminLogin />} />
             <Route path="/login/engineer" element={<EngineerLogin />} />
             <Route path="/login/client" element={<ClientLogin />} />
-            
+
             {/* Admin Routes - Protected */}
             <Route
               path="/admin"
@@ -103,6 +104,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <AdminAgents />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/create-agent"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminAgentCreator />
                 </ProtectedRoute>
               }
             />
@@ -316,8 +325,8 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            
-            
+
+
             {/* Client Routes - Protected */}
             <Route
               path="/client"
@@ -484,7 +493,7 @@ const App = () => (
 
             {/* Sub-user invite activation (public) */}
             <Route path="/invite/:token" element={<SubUserInvite />} />
-            
+
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
