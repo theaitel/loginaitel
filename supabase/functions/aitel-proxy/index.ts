@@ -86,7 +86,7 @@ function determineOutcome(status: string, connected: boolean): string {
 // ONLY expose these fields - everything else is removed
 async function maskExecutionData(execution: Record<string, unknown>): Promise<Record<string, unknown>> {
   const rawTelephonyData = (execution.telephony_data || {}) as Record<string, unknown>;
-  
+
   // Calculate duration from various sources
   let durationSeconds: number | null = null;
   if (rawTelephonyData.duration) {
@@ -94,72 +94,72 @@ async function maskExecutionData(execution: Record<string, unknown>): Promise<Re
   } else if (execution.conversation_duration !== undefined) {
     durationSeconds = Math.round(execution.conversation_duration as number);
   }
-  
+
   const connected = durationSeconds ? durationSeconds >= 45 : false;
   const status = execution.status as string || "initiated";
-  
+
   // Encrypt transcript and summary with AES-256-GCM
   let encryptedTranscript: EncryptedPayload | null = null;
   let encryptedSummary: EncryptedPayload | null = null;
-  
+
   if (execution.transcript && typeof execution.transcript === "string") {
     encryptedTranscript = await encryptData(execution.transcript as string);
   }
-  
+
   if (execution.summary && typeof execution.summary === "string") {
     encryptedSummary = await encryptData(execution.summary as string);
   }
-  
+
   // Build STRICTLY sanitized response - WHITELIST ONLY
   const sanitized: Record<string, unknown> = {
     // Core identifiers
     execution_id: execution.id,
     status,
-    
+
     // Duration & outcome (computed, not raw)
     duration: durationSeconds,
     outcome: determineOutcome(status, connected),
     display_cost: calculateDisplayCost(durationSeconds),
-    
+
     // Timestamps (allowed)
     timestamps: {
       created_at: execution.created_at,
       started_at: execution.initiated_at,
       ended_at: execution.updated_at,
     },
-    
+
     // AES-256-GCM encrypted sensitive content
     // Frontend must call decrypt-content endpoint to get readable content
     transcript: encryptedTranscript,
     summary: encryptedSummary,
-    
+
     // Flags only (no raw data)
     has_recording: !!rawTelephonyData.recording_url,
     has_transcript: !!execution.transcript,
     has_summary: !!execution.summary,
     connected,
-    
+
     // Sanitized telephony (masked phones, proxied recording)
     telephony_data: {
       to_number: maskPhone(rawTelephonyData.to_number as string || execution.user_number as string),
       from_number: maskPhone(rawTelephonyData.from_number as string || execution.agent_number as string),
       duration: durationSeconds ? String(durationSeconds) : null,
-      recording_url: rawTelephonyData.recording_url 
+      recording_url: rawTelephonyData.recording_url
         ? proxyRecordingUrl(rawTelephonyData.recording_url as string, execution.id as string)
         : null,
     },
   };
-  
+
   // Encrypt extracted_data if present
   if (execution.extracted_data && execution.extracted_data !== "{}") {
-    const extractedStr = typeof execution.extracted_data === 'string' 
-      ? execution.extracted_data 
+    const extractedStr = typeof execution.extracted_data === 'string'
+      ? execution.extracted_data
       : JSON.stringify(execution.extracted_data);
     if (extractedStr !== "{}" && extractedStr !== "null") {
       sanitized.extracted_data = await encryptData(extractedStr);
     }
   }
-  
+
   // REMOVED FROM OUTPUT (never exposed):
   // - usage_breakdown (LLM tokens, model names, provider info)
   // - cost_breakdown (actual costs)
@@ -172,16 +172,17 @@ async function maskExecutionData(execution: Record<string, unknown>): Promise<Re
   // - total_cost (actual cost value)
   // - agent_extraction, workflow_retries, custom_extractions
   // - transfer_call_data, smart_status, rescheduled_at
-  
+
   return sanitized;
 }
 
-// Mask agent data to hide system prompts
-function maskAgentData(agent: Record<string, unknown>): Record<string, unknown> {
+// Mask agent data to hide system prompts from unauthorized users
+function maskAgentData(agent: Record<string, unknown>, userRole: string): Record<string, unknown> {
   const masked = { ...agent };
-  
-  // Mask system prompts in agent_prompts
-  if (agent.agent_prompts) {
+
+  // Mask system prompts in agent_prompts ONLY for clients/sub-users
+  // Admins and engineers need the full prompts for syncing and editing
+  if (agent.agent_prompts && userRole !== "admin" && userRole !== "engineer") {
     const prompts = agent.agent_prompts as Record<string, { system_prompt?: string }>;
     const maskedPrompts: Record<string, { system_prompt?: string | null }> = {};
     for (const [key, value] of Object.entries(prompts)) {
@@ -192,7 +193,7 @@ function maskAgentData(agent: Record<string, unknown>): Record<string, unknown> 
     }
     masked.agent_prompts = maskedPrompts;
   }
-  
+
   return masked;
 }
 
@@ -233,7 +234,7 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const token = authHeader.replace("Bearer ", "");
-    
+
     // Use getClaims for more reliable JWT validation
     const { data: claimsData, error: authError } = await supabase.auth.getClaims(token);
     if (authError || !claimsData?.claims) {
@@ -243,7 +244,7 @@ serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    
+
     const userId = claimsData.claims.sub as string;
 
     // Get user role
@@ -300,27 +301,27 @@ serve(async (req) => {
             { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        
-      debugLog("Creating agent");
-      
-      response = await fetch(`${BOLNA_API_BASE}/v2/agent`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${BOLNA_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        errorLog("Bolna API error", { status: response.status });
-        return new Response(
-          JSON.stringify({ error: "Agent creation failed" }),
-          { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      break;
+
+        debugLog("Creating agent");
+
+        response = await fetch(`${BOLNA_API_BASE}/v2/agent`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${BOLNA_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          errorLog("Bolna API error", { status: response.status });
+          return new Response(
+            JSON.stringify({ error: "Agent creation failed" }),
+            { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        break;
 
       case "update-agent":
         // Only engineers can update agents
@@ -338,7 +339,7 @@ serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        
+
         response = await fetch(`${BOLNA_API_BASE}/v2/agent/${updateAgentId}`, {
           method: "PUT",
           headers: {
@@ -365,7 +366,7 @@ serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        
+
         response = await fetch(`${BOLNA_API_BASE}/v2/agent/${deleteAgentId}`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${BOLNA_API_KEY}` },
@@ -388,7 +389,7 @@ serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        
+
         response = await fetch(`${BOLNA_API_BASE}/v2/agent/${stopAgentId}/stop`, {
           method: "POST",
           headers: { Authorization: `Bearer ${BOLNA_API_KEY}` },
@@ -513,7 +514,7 @@ serve(async (req) => {
         } else {
           const errorData = await response.json();
           return new Response(
-            JSON.stringify({ 
+            JSON.stringify({
               error: errorData.message || "Failed to initiate test call",
               details: errorData.details,
             }),
@@ -554,7 +555,7 @@ serve(async (req) => {
           const rawExecution = await response.json();
           // Strictly sanitize and encrypt execution data
           const maskedExecution = await maskExecutionData(rawExecution);
-          
+
           return new Response(JSON.stringify(maskedExecution), {
             status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -585,11 +586,11 @@ serve(async (req) => {
           const rawData = await response.json();
           // Encrypt all execution data
           const maskedData = await Promise.all(
-            (rawData.data || rawData).map((exec: Record<string, unknown>) => 
+            (rawData.data || rawData).map((exec: Record<string, unknown>) =>
               maskExecutionData(exec)
             )
           );
-          
+
           return new Response(JSON.stringify({
             data: maskedData,
             pagination: rawData.pagination || { page: parseInt(page), limit: parseInt(limit) }
@@ -776,14 +777,14 @@ serve(async (req) => {
 
     // Parse and potentially mask the response
     const data = await response.json();
-    
+
     // Mask agent data if it contains sensitive prompts
     let sanitizedData = data;
     if (action === "get-agent" && data) {
-      sanitizedData = maskAgentData(data);
+      sanitizedData = maskAgentData(data, userRole);
     }
     if (action === "list-agents" && Array.isArray(data)) {
-      sanitizedData = data.map((agent: Record<string, unknown>) => maskAgentData(agent));
+      sanitizedData = data.map((agent: Record<string, unknown>) => maskAgentData(agent, userRole));
     }
 
     return new Response(JSON.stringify(sanitizedData), {
