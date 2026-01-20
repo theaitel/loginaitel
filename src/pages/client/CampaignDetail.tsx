@@ -76,6 +76,7 @@ import {
   Eye,
   Settings2,
   Clock,
+  Pencil,
 } from "lucide-react";
 
 interface CampaignLead {
@@ -123,6 +124,7 @@ export default function CampaignDetail() {
   const [activeTab, setActiveTab] = useState("all");
   const [newLead, setNewLead] = useState({ name: "", phone_number: "", email: "" });
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
+  const [editingLead, setEditingLead] = useState<CampaignLead | null>(null);
   const [selectedLead, setSelectedLead] = useState<CampaignLead | null>(null);
   const [isLeadDetailsOpen, setIsLeadDetailsOpen] = useState(false);
 
@@ -161,6 +163,7 @@ export default function CampaignDetail() {
   const { data: leads, isLoading: leadsLoading, refetch: refetchLeads } = useQuery({
     queryKey: ["campaign-leads", campaignId],
     enabled: !!campaignId,
+    refetchInterval: 5000, // Auto-fetch every 5s to ensure status is synced
     queryFn: async () => {
       const { data, error } = await supabase
         .from("campaign_leads")
@@ -289,6 +292,34 @@ export default function CampaignDetail() {
       setIsAddLeadOpen(false);
       setNewLead({ name: "", phone_number: "", email: "" });
       toast({ title: "Lead added successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Update lead mutation
+  const updateLead = useMutation({
+    mutationFn: async () => {
+      if (!editingLead) return;
+
+      const { error } = await supabase
+        .from("campaign_leads")
+        .update({
+          name: newLead.name,
+          phone_number: newLead.phone_number,
+          email: newLead.email || null,
+        })
+        .eq("id", editingLead.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["campaign-leads"] });
+      setIsAddLeadOpen(false);
+      setEditingLead(null);
+      setNewLead({ name: "", phone_number: "", email: "" });
+      toast({ title: "Lead updated successfully" });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -564,6 +595,7 @@ export default function CampaignDetail() {
                   title: "No Agent Assigned",
                   description: "Please assign an agent to this campaign before starting calls.",
                   variant: "destructive",
+                  duration: 5000,
                 });
                 return;
               }
@@ -575,16 +607,25 @@ export default function CampaignDetail() {
             <Play className="h-4 w-4 mr-2" />
             Call Selected ({selectedLeads.length})
           </Button>
-          <Dialog open={isAddLeadOpen} onOpenChange={setIsAddLeadOpen}>
+          <Dialog open={isAddLeadOpen} onOpenChange={(open) => {
+            setIsAddLeadOpen(open);
+            if (!open) {
+              setEditingLead(null);
+              setNewLead({ name: "", phone_number: "", email: "" });
+            }
+          }}>
             <DialogTrigger asChild>
-              <Button>
+              <Button onClick={() => {
+                setEditingLead(null);
+                setNewLead({ name: "", phone_number: "", email: "" });
+              }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Lead
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add New Lead</DialogTitle>
+                <DialogTitle>{editingLead ? "Edit Lead" : "Add New Lead"}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 mt-4">
                 <div className="space-y-2">
@@ -613,11 +654,11 @@ export default function CampaignDetail() {
                 </div>
                 <Button
                   className="w-full"
-                  onClick={() => addLead.mutate()}
-                  disabled={!newLead.name || !newLead.phone_number || addLead.isPending}
+                  onClick={() => editingLead ? updateLead.mutate() : addLead.mutate()}
+                  disabled={!newLead.name || !newLead.phone_number || addLead.isPending || updateLead.isPending}
                 >
-                  {addLead.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Add Lead
+                  {(addLead.isPending || updateLead.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {editingLead ? "Update Lead" : "Add Lead"}
                 </Button>
               </div>
             </DialogContent>
@@ -981,6 +1022,23 @@ export default function CampaignDetail() {
                               title="View details"
                             >
                               <Eye className="h-4 w-4" />
+                            </Button>
+                            {/* Edit Button */}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setEditingLead(lead);
+                                setNewLead({
+                                  name: lead.name,
+                                  phone_number: lead.phone_number,
+                                  email: lead.email || "",
+                                });
+                                setIsAddLeadOpen(true);
+                              }}
+                              title="Edit lead"
+                            >
+                              <Pencil className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="ghost"
