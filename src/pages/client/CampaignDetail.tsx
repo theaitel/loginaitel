@@ -445,15 +445,69 @@ export default function CampaignDetail() {
         throw new Error("Not authenticated");
       }
 
+      // 1. Create a call record FIRST
+      const { data: callRecord, error: callError } = await supabase
+        .from("calls")
+        .insert({
+          agent_id: campaign.agent_id,
+          client_id: user.id,
+          lead_id: lead.id,
+          status: "initiated",
+          metadata: {
+            source: "campaign_single",
+            campaign_id: campaignId,
+            lead_name: lead.name,
+          }
+        })
+        .select()
+        .single();
+
+      if (callError) throw new Error(`Failed to create call record: ${callError.message}`);
+
+      // 2. Make the actual call, passing the internal call_id
       const { data, error } = await makeCall({
         agent_id: campaign.agent_id,
         client_id: user.id,
         lead_id: lead.id,
         phone_number: lead.phone_number,
         name: lead.name,
+        user_data: {
+          lead_id: lead.id,
+          lead_name: lead.name,
+          call_id: callRecord.id,
+          campaign_id: campaignId!,
+        }
       });
 
-      if (error) throw new Error(error);
+      if (error) {
+        // If call fails, mark record as failed
+        await supabase
+          .from("calls")
+          .update({ status: "failed", metadata: { error: error } })
+          .eq("id", callRecord.id);
+        throw new Error(error);
+      }
+
+      // 3. Update call record with execution ID and status queued
+      if (data?.execution_id) {
+        await supabase
+          .from("calls")
+          .update({
+            external_call_id: data.execution_id,
+            status: "queued"
+          })
+          .eq("id", callRecord.id);
+
+        // 4. Update lead status to in_progress
+        await supabase
+          .from("campaign_leads")
+          .update({
+            call_status: "in_progress",
+            call_id: callRecord.id
+          })
+          .eq("id", lead.id);
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -461,8 +515,12 @@ export default function CampaignDetail() {
         title: "Call Initiated",
         description: "The AI agent is now calling the lead.",
       });
+      // Immediate refetch to show new status
       refetchLeads();
       refetchQueue();
+      // Invalidate queries to ensure freshness
+      queryClient.invalidateQueries({ queryKey: ["campaign-leads"] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-active-calls"] });
     },
     onError: (error: any) => {
       toast({
