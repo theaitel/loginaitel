@@ -61,6 +61,20 @@ const getPackageIcon = (pkg: { name: string; is_enterprise: boolean }) => {
   return <Shield className="h-8 w-8" />;
 };
 
+// Helper to safely parse features
+const safeFeatures = (features: any): string[] => {
+  if (Array.isArray(features)) return features;
+  if (typeof features === 'string') {
+    try {
+      const parsed = JSON.parse(features);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      return [features];
+    }
+  }
+  return [];
+};
+
 export default function ClientPricing() {
   const { user } = useAuth();
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
@@ -84,7 +98,7 @@ export default function ClientPricing() {
         concurrency: `${pkg.concurrency_level} concurrent calls`,
         inboundCalls: pkg.includes_inbound,
         description: pkg.description || "",
-        features: pkg.features || [],
+        features: safeFeatures(pkg.features),
         popular: pkg.slug === 'growth', // Hardcoded popular logic for now
         enterprise: pkg.is_enterprise,
         icon: getPackageIcon(pkg)
