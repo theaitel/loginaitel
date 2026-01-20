@@ -1,0 +1,37 @@
+project_id = "mdixmnsznuoyvmqjzhin"
+
+[functions.aitel-proxy]
+verify_jwt = false
+
+[functions.bolna-webhook]
+verify_jwt = false
+
+[functions.agent-chat]
+verify_jwt = true
+
+[functions.evaluate-call]
+verify_jwt = true
+
+[functions.process-call-queue]
+verify_jwt = false
+
+[functions.aitel-webhook]
+verify_jwt = false
+
+[functions.secure-data-proxy]
+verify_jwt = false
+
+[functions.voice-proxy]
+verify_jwt = false
+
+[functions.decrypt-content]
+verify_jwt = false
+
+[functions.start-seat-trial]
+verify_jwt = false
+
+[functions.setup-seat-autopay]
+verify_jwt = false
+
+[functions.analyze-call-insights]
+verify_jwt = false
