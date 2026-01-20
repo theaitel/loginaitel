@@ -14,11 +14,11 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  Phone, 
-  Loader2, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Phone,
+  Loader2,
+  CheckCircle,
+  XCircle,
   Clock,
   AlertTriangle,
   Play,
@@ -76,7 +76,7 @@ export function BulkCallDialog({
         .select("id, status, lead_id, error_message")
         .eq("campaign_id", campaignId)
         .order("created_at", { ascending: false });
-      
+
       if (error) throw error;
       return data || [];
     },
@@ -131,7 +131,7 @@ export function BulkCallDialog({
   const queueLeads = useMutation({
     mutationFn: async () => {
       if (!agentId) throw new Error("No agent assigned to this campaign");
-      
+
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.user) throw new Error("Not authenticated");
 
@@ -178,17 +178,17 @@ export function BulkCallDialog({
       return leadsToQueue.length;
     },
     onSuccess: (count) => {
-      toast({ 
-        title: "Leads queued", 
-        description: `${count} leads added to call queue` 
+      toast({
+        title: "Leads queued",
+        description: `${count} leads added to call queue`
       });
       refetchQueue();
     },
     onError: (error: Error) => {
-      toast({ 
-        title: "Error", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
       });
     },
   });
@@ -208,19 +208,19 @@ export function BulkCallDialog({
     },
     onSuccess: (data) => {
       if (data.processed > 0) {
-        toast({ 
-          title: "Calls initiated", 
-          description: `${data.successful} calls started, ${data.failed} failed` 
+        toast({
+          title: "Calls initiated",
+          description: `${data.successful} calls started, ${data.failed} failed`
         });
       }
       refetchQueue();
       queryClient.invalidateQueries({ queryKey: ["campaign-leads"] });
     },
     onError: (error: Error) => {
-      toast({ 
-        title: "Processing error", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Processing error",
+        description: error.message,
+        variant: "destructive"
       });
       setIsProcessing(false);
     },
@@ -248,7 +248,7 @@ export function BulkCallDialog({
   const retryFailed = useMutation({
     mutationFn: async () => {
       if (!agentId) throw new Error("No agent assigned to this campaign");
-      
+
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.user) throw new Error("Not authenticated");
 
@@ -265,8 +265,8 @@ export function BulkCallDialog({
       // Reset failed items to pending
       const { error: updateError } = await supabase
         .from("campaign_call_queue")
-        .update({ 
-          status: "pending", 
+        .update({
+          status: "pending",
           error_message: null,
           started_at: null,
           completed_at: null
@@ -279,19 +279,19 @@ export function BulkCallDialog({
       return failedItems.length;
     },
     onSuccess: (count) => {
-      toast({ 
-        title: "Retrying failed calls", 
-        description: `${count} leads re-queued for calling` 
+      toast({
+        title: "Retrying failed calls",
+        description: `${count} leads re-queued for calling`
       });
       setIsProcessing(true);
       processQueue.mutate();
       refetchQueue();
     },
     onError: (error: Error) => {
-      toast({ 
-        title: "Error", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
       });
     },
   });
@@ -300,7 +300,7 @@ export function BulkCallDialog({
     // First queue the leads
     await queueLeads.mutateAsync();
     setIsProcessing(true);
-    
+
     // Then start processing
     processQueue.mutate();
   };
@@ -312,8 +312,8 @@ export function BulkCallDialog({
 
   const totalInQueue = queueStatus.pending + queueStatus.in_progress + queueStatus.completed + queueStatus.failed + queueStatus.retry_pending + queueStatus.max_retries_reached;
   const completedCount = queueStatus.completed + queueStatus.failed + queueStatus.max_retries_reached;
-  const progressPercent = totalInQueue > 0 
-    ? (completedCount / totalInQueue) * 100 
+  const progressPercent = totalInQueue > 0
+    ? (completedCount / totalInQueue) * 100
     : 0;
 
   return (
@@ -345,7 +345,7 @@ export function BulkCallDialog({
                 <span>{completedCount} / {totalInQueue}</span>
               </div>
               <Progress value={progressPercent} className="h-2" />
-              
+
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="border rounded p-2">
                   <Clock className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
@@ -363,7 +363,7 @@ export function BulkCallDialog({
                   <p className="text-xs text-muted-foreground">Retry Pending</p>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="border rounded p-2">
                   <CheckCircle className="h-4 w-4 mx-auto mb-1 text-green-500" />
@@ -430,8 +430,8 @@ export function BulkCallDialog({
 
         <DialogFooter className="gap-2">
           {queueStatus.pending > 0 && (
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={() => cancelQueue.mutate()}
               disabled={cancelQueue.isPending}
             >
@@ -439,9 +439,9 @@ export function BulkCallDialog({
               Cancel Queue
             </Button>
           )}
-          
+
           {totalInQueue === 0 ? (
-            <Button 
+            <Button
               onClick={handleStartCalling}
               disabled={!agentId || queueLeads.isPending || selectedLeadIds.length === 0}
             >

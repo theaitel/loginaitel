@@ -684,6 +684,9 @@ export default function CampaignDetail() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{editingLead ? "Edit Lead" : "Add New Lead"}</DialogTitle>
+                <DialogDescription>
+                  {editingLead ? "Update the details of the lead below." : "Enter the details for the new lead below."}
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 mt-4">
                 <div className="space-y-2">
