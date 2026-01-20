@@ -59,10 +59,15 @@ const statusConfig: Record<string, { label: string; icon: typeof Phone; classNam
     icon: XCircle,
     className: "bg-destructive/10 text-destructive",
   },
-  retry_scheduled: {
-    label: "Retry Scheduled",
+  retry_pending: {
+    label: "Retry Pending",
     icon: RefreshCw,
     className: "bg-chart-4/10 text-chart-4",
+  },
+  max_retries_reached: {
+    label: "Failed (Max Retries)",
+    icon: XCircle,
+    className: "bg-destructive/10 text-destructive",
   },
 };
 
@@ -114,10 +119,10 @@ export function CampaignProgressDashboard({ campaignId, totalLeads }: CampaignPr
     const pending = queueData.filter((q) => q.status === "pending").length;
     const inProgress = queueData.filter((q) => q.status === "in_progress").length;
     const completed = queueData.filter((q) => q.status === "completed").length;
-    const failed = queueData.filter((q) => q.status === "failed").length;
-    const retryScheduled = queueData.filter((q) => q.status === "retry_scheduled").length;
+    const failed = queueData.filter((q) => q.status === "failed" || q.status === "max_retries_reached").length;
+    const retryScheduled = queueData.filter((q) => q.status === "retry_pending").length;
     const total = queueData.length;
-    
+
     const processed = completed + failed;
     const progressPercent = total > 0 ? Math.round((processed / total) * 100) : 0;
 
@@ -132,7 +137,7 @@ export function CampaignProgressDashboard({ campaignId, totalLeads }: CampaignPr
         const remaining = pending + inProgress + retryScheduled;
         const estimatedMs = remaining * avgTimePerCall;
         const estimatedMins = Math.ceil(estimatedMs / 60000);
-        estimatedTime = estimatedMins > 60 
+        estimatedTime = estimatedMins > 60
           ? `~${Math.round(estimatedMins / 60)}h ${estimatedMins % 60}m`
           : `~${estimatedMins}m`;
       }
@@ -146,9 +151,9 @@ export function CampaignProgressDashboard({ campaignId, totalLeads }: CampaignPr
     if (!queueData) return [];
     // Show in_progress first, then pending, then retry_scheduled
     return queueData
-      .filter((q) => ["in_progress", "pending", "retry_scheduled"].includes(q.status))
+      .filter((q) => ["in_progress", "pending", "retry_pending"].includes(q.status))
       .sort((a, b) => {
-        const order = { in_progress: 0, pending: 1, retry_scheduled: 2 };
+        const order = { in_progress: 0, pending: 1, retry_pending: 2 };
         return (order[a.status as keyof typeof order] ?? 3) - (order[b.status as keyof typeof order] ?? 3);
       })
       .slice(0, 10);
@@ -249,9 +254,8 @@ export function CampaignProgressDashboard({ campaignId, totalLeads }: CampaignPr
                 return (
                   <div
                     key={item.id}
-                    className={`flex items-center gap-3 p-2 rounded-md border ${
-                      item.status === "in_progress" ? "border-primary/30 bg-primary/5" : "border-border"
-                    }`}
+                    className={`flex items-center gap-3 p-2 rounded-md border ${item.status === "in_progress" ? "border-primary/30 bg-primary/5" : "border-border"
+                      }`}
                   >
                     <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs font-medium">
                       {index + 1}

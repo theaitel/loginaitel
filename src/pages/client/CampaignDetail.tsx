@@ -213,6 +213,8 @@ export default function CampaignDetail() {
           console.log("Lead update received:", payload);
           refetchLeads();
           queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
+          queryClient.invalidateQueries({ queryKey: ["campaign-queue-progress", campaignId] });
+          refetchQueue();
         }
       )
       .subscribe();
@@ -234,6 +236,8 @@ export default function CampaignDetail() {
             console.log("Call update received:", payload);
             refetchLeads();
             queryClient.invalidateQueries({ queryKey: ["campaign-active-calls", campaignId] });
+            queryClient.invalidateQueries({ queryKey: ["campaign-queue-progress", campaignId] });
+            refetchQueue();
           }
         }
       )
@@ -252,6 +256,7 @@ export default function CampaignDetail() {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["campaign-active-calls", campaignId] });
+          queryClient.invalidateQueries({ queryKey: ["campaign-queue-progress", campaignId] });
           refetchQueue();
         }
       )
