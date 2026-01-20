@@ -49,92 +49,51 @@ interface Package {
   features: string[];
 }
 
-const PACKAGES: Package[] = [
-  {
-    id: "trust-building",
-    name: "Trust Building Pack",
-    calls: 5000,
-    icon: <Shield className="h-8 w-8" />,
-    description: "Perfect for getting started and building trust with your customers",
-    concurrency: "10 concurrent calls",
-    inboundCalls: false,
-    features: [
-      "5,000 connected calls",
-      "10 concurrent calls",
-      "No charge for missed calls",
-      "Basic analytics",
-      "Email support",
-      "45+ second call billing",
-    ],
-  },
-  {
-    id: "growth",
-    name: "Growth Pack",
-    calls: 30000,
-    icon: <Rocket className="h-8 w-8" />,
-    description: "Scale your operations with increased capacity",
-    concurrency: "12 concurrent calls",
-    inboundCalls: false,
-    popular: true,
-    features: [
-      "30,000 connected calls",
-      "12 concurrent calls",
-      "No charge for missed calls",
-      "Advanced analytics",
-      "Priority email support",
-      "45+ second call billing",
-      "API access",
-    ],
-  },
-  {
-    id: "professional",
-    name: "Professional Pack",
-    calls: 50000,
-    icon: <Crown className="h-8 w-8" />,
-    description: "For established businesses with high call volumes",
-    concurrency: "15 concurrent calls",
-    inboundCalls: false,
-    features: [
-      "50,000 connected calls",
-      "15 concurrent calls",
-      "No charge for missed calls",
-      "Full analytics suite",
-      "Priority support",
-      "45+ second call billing",
-      "API access",
-      "Custom integrations",
-    ],
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise Pack",
-    calls: 100000,
-    icon: <Building2 className="h-8 w-8" />,
-    description: "Ultimate solution for large-scale operations",
-    concurrency: "20 concurrent calls",
-    inboundCalls: true,
-    enterprise: true,
-    features: [
-      "1,00,000 connected calls",
-      "20 concurrent calls",
-      "No charge for missed calls",
-      "Full analytics suite",
-      "Dedicated account manager",
-      "45+ second call billing",
-      "API access",
-      "Custom integrations",
-      "Inbound calls included",
-      "SLA guarantee",
-    ],
-  },
-];
+// Helper to get icon based on package name/type
+const getPackageIcon = (pkg: { name: string; is_enterprise: boolean }) => {
+  if (pkg.is_enterprise) return <Building2 className="h-8 w-8" />;
+
+  const name = pkg.name.toLowerCase();
+  if (name.includes("trust")) return <Shield className="h-8 w-8" />;
+  if (name.includes("growth")) return <Rocket className="h-8 w-8" />;
+  if (name.includes("professional")) return <Crown className="h-8 w-8" />;
+
+  return <Shield className="h-8 w-8" />;
+};
 
 export default function ClientPricing() {
   const { user } = useAuth();
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
 
+  // Fetch packages from Supabase
+  const { data: packages, isLoading: isLoadingPackages } = useQuery({
+    queryKey: ["client-packages"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pricing_packages")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order");
+
+      if (error) throw error;
+
+      return (data || []).map(pkg => ({
+        id: pkg.id,
+        name: pkg.name,
+        calls: pkg.calls_included,
+        concurrency: `${pkg.concurrency_level} concurrent calls`,
+        inboundCalls: pkg.includes_inbound,
+        description: pkg.description || "",
+        features: pkg.features || [],
+        popular: pkg.slug === 'growth', // Hardcoded popular logic for now
+        enterprise: pkg.is_enterprise,
+        icon: getPackageIcon(pkg)
+      }));
+    },
+  });
+
   // Fetch current client subscription/credits info
-  const { data: clientData, isLoading } = useQuery({
+  const { data: clientData, isLoading: isLoadingCredits } = useQuery({
     queryKey: ["client-credits-info", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
@@ -148,8 +107,10 @@ export default function ClientPricing() {
     },
   });
 
+  const isLoading = isLoadingPackages || isLoadingCredits;
+
   const handleSelectPackage = (packageId: string) => {
-    const pkg = PACKAGES.find(p => p.id === packageId);
+    const pkg = packages?.find(p => p.id === packageId);
     if (pkg?.enterprise) {
       // Contact sales for enterprise
       window.open("mailto:sales@aitel.com?subject=Enterprise Plan Inquiry", "_blank");
@@ -174,7 +135,7 @@ export default function ClientPricing() {
         <div className="text-center max-w-3xl mx-auto">
           <h1 className="text-4xl font-bold mb-4">Choose Your Plan</h1>
           <p className="text-muted-foreground text-lg">
-            Select a package that fits your business needs. All plans include connected calls only - 
+            Select a package that fits your business needs. All plans include connected calls only -
             we never charge for missed calls.
           </p>
         </div>
@@ -201,7 +162,7 @@ export default function ClientPricing() {
                   </TooltipProvider>
                 </h3>
                 <p className="text-muted-foreground mt-1">
-                  A <strong>connected call</strong> is when someone answers and talks for <strong>45 seconds or more</strong>. 
+                  A <strong>connected call</strong> is when someone answers and talks for <strong>45 seconds or more</strong>.
                   Missed calls, unanswered calls, and calls under 45 seconds are <strong>FREE</strong> - we don't charge you for them!
                 </p>
               </div>
@@ -215,12 +176,11 @@ export default function ClientPricing() {
 
         {/* Packages Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {PACKAGES.map((pkg) => (
-            <Card 
+          {packages?.map((pkg) => (
+            <Card
               key={pkg.id}
-              className={`relative flex flex-col ${
-                pkg.popular ? "border-primary shadow-lg ring-2 ring-primary/20" : ""
-              } ${pkg.enterprise ? "border-amber-500/50" : ""}`}
+              className={`relative flex flex-col ${pkg.popular ? "border-primary shadow-lg ring-2 ring-primary/20" : ""
+                } ${pkg.enterprise ? "border-amber-500/50" : ""}`}
             >
               {pkg.popular && (
                 <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">
@@ -232,19 +192,18 @@ export default function ClientPricing() {
                   Enterprise
                 </Badge>
               )}
-              
+
               <CardHeader className="text-center pb-2">
-                <div className={`mx-auto p-4 mb-3 ${
-                  pkg.popular ? "bg-primary/10 text-primary" : 
-                  pkg.enterprise ? "bg-amber-500/10 text-amber-600" : 
-                  "bg-muted"
-                }`}>
+                <div className={`mx-auto p-4 mb-3 ${pkg.popular ? "bg-primary/10 text-primary" :
+                  pkg.enterprise ? "bg-amber-500/10 text-amber-600" :
+                    "bg-muted"
+                  }`}>
                   {pkg.icon}
                 </div>
                 <CardTitle className="text-xl">{pkg.name}</CardTitle>
                 <CardDescription className="min-h-[40px]">{pkg.description}</CardDescription>
               </CardHeader>
-              
+
               <CardContent className="flex-1 space-y-4">
                 {/* Call Count */}
                 <div className="text-center py-4 border-y-2 border-border">
@@ -293,8 +252,8 @@ export default function ClientPricing() {
               </CardContent>
 
               <CardFooter className="pt-4">
-                <Button 
-                  className="w-full" 
+                <Button
+                  className="w-full"
                   size="lg"
                   variant={pkg.enterprise ? "outline" : pkg.popular ? "default" : "secondary"}
                   onClick={() => handleSelectPackage(pkg.id)}
@@ -371,7 +330,7 @@ export default function ClientPricing() {
           <CardContent className="py-8">
             <h3 className="text-2xl font-bold mb-2">Need a Custom Plan?</h3>
             <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
-              Looking for custom call volumes, higher concurrency, or specific features? 
+              Looking for custom call volumes, higher concurrency, or specific features?
               Our sales team is here to help create a plan that fits your exact needs.
             </p>
             <Button size="lg" variant="outline" onClick={handleContactSales}>
@@ -391,43 +350,43 @@ export default function ClientPricing() {
               <AccordionItem value="connected-call">
                 <AccordionTrigger>What counts as a connected call?</AccordionTrigger>
                 <AccordionContent>
-                  A connected call is when the recipient answers and the conversation lasts for 45 seconds or more. 
+                  A connected call is when the recipient answers and the conversation lasts for 45 seconds or more.
                   Calls that go unanswered, reach voicemail, or last less than 45 seconds are not counted against your quota.
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="missed-calls">
                 <AccordionTrigger>Do you charge for missed calls?</AccordionTrigger>
                 <AccordionContent>
-                  <strong>No!</strong> We only charge for connected calls (45+ seconds). Missed calls, 
+                  <strong>No!</strong> We only charge for connected calls (45+ seconds). Missed calls,
                   busy signals, unanswered calls, and short calls under 45 seconds are completely free.
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="downgrade">
                 <AccordionTrigger>Can I downgrade my plan?</AccordionTrigger>
                 <AccordionContent>
-                  No, once you select a package you cannot downgrade to a lower tier. However, you can always 
+                  No, once you select a package you cannot downgrade to a lower tier. However, you can always
                   upgrade to a higher package at any time. This policy ensures commitment and better pricing for our customers.
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="concurrency">
                 <AccordionTrigger>What is concurrency and how does it work?</AccordionTrigger>
                 <AccordionContent>
-                  Concurrency refers to the number of calls that can be made simultaneously. For example, 
-                  if you have 10 concurrent calls, you can have up to 10 active calls running at the same time. 
+                  Concurrency refers to the number of calls that can be made simultaneously. For example,
+                  if you have 10 concurrent calls, you can have up to 10 active calls running at the same time.
                   The concurrency level is based on your package size (10-20 calls). Need more? Contact sales!
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="inbound">
                 <AccordionTrigger>What about inbound calls?</AccordionTrigger>
                 <AccordionContent>
-                  Inbound calls are included only in the Enterprise plan. For other plans, 
+                  Inbound calls are included only in the Enterprise plan. For other plans,
                   you can contact our sales team to discuss custom inbound call solutions based on your needs.
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="rollover">
                 <AccordionTrigger>Do unused calls roll over?</AccordionTrigger>
                 <AccordionContent>
-                  Unused calls do not automatically roll over. However, your purchased calls remain available 
+                  Unused calls do not automatically roll over. However, your purchased calls remain available
                   until used. Contact our sales team for specific questions about call validity periods.
                 </AccordionContent>
               </AccordionItem>
