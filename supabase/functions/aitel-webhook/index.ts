@@ -164,6 +164,7 @@ async function processCallUpdate(
       break;
     case "call_disconnected":
       mappedStatus = "disconnected";
+      isCompleted = true;
       break;
     case "completed":
       mappedStatus = "completed";
